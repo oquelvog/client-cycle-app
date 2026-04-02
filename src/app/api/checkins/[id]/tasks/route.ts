@@ -7,15 +7,16 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const { id } = await params
   const tasks = await prisma.task.findMany({
-    where: { checkInId: params.id },
+    where: { checkInId: id },
     orderBy: { createdAt: 'asc' },
   })
 
@@ -24,13 +25,14 @@ export async function GET(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const { id } = await params
   const body = await req.json()
   const { title, description } = body
 
@@ -42,11 +44,10 @@ export async function POST(
     data: {
       title,
       description: description || null,
-      checkInId: params.id,
+      checkInId: id,
     },
   })
 
-  // Create ClientTask records for all existing clients
   const clients = await prisma.client.findMany()
   for (const c of clients) {
     await prisma.clientTask.upsert({

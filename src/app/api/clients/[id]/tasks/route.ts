@@ -7,22 +7,23 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const { id } = await params
   const client = await prisma.client.findFirst({
-    where: { id: params.id, advisorId: session.user.id },
+    where: { id, advisorId: session.user.id },
   })
   if (!client) {
     return NextResponse.json({ error: 'Client not found' }, { status: 404 })
   }
 
   const tasks = await prisma.clientTask.findMany({
-    where: { clientId: params.id },
+    where: { clientId: id },
     include: { task: { include: { checkIn: { include: { milestone: true } } } } },
   })
 
@@ -31,15 +32,16 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const { id } = await params
   const client = await prisma.client.findFirst({
-    where: { id: params.id, advisorId: session.user.id },
+    where: { id, advisorId: session.user.id },
   })
   if (!client) {
     return NextResponse.json({ error: 'Client not found' }, { status: 404 })
@@ -53,14 +55,14 @@ export async function PATCH(
   }
 
   const updated = await prisma.clientTask.upsert({
-    where: { clientId_taskId: { clientId: params.id, taskId } },
+    where: { clientId_taskId: { clientId: id, taskId } },
     update: {
       status,
       notes,
       completedAt: status === 'completed' ? new Date() : null,
     },
     create: {
-      clientId: params.id,
+      clientId: id,
       taskId,
       status: status || 'pending',
       notes,

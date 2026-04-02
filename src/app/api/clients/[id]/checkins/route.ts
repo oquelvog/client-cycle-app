@@ -7,22 +7,23 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const { id } = await params
   const client = await prisma.client.findFirst({
-    where: { id: params.id, advisorId: session.user.id },
+    where: { id, advisorId: session.user.id },
   })
   if (!client) {
     return NextResponse.json({ error: 'Client not found' }, { status: 404 })
   }
 
   const checkIns = await prisma.clientCheckIn.findMany({
-    where: { clientId: params.id },
+    where: { clientId: id },
     include: { checkIn: { include: { milestone: true } } },
     orderBy: { checkIn: { dayOfYear: 'asc' } },
   })
@@ -32,15 +33,16 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const { id } = await params
   const client = await prisma.client.findFirst({
-    where: { id: params.id, advisorId: session.user.id },
+    where: { id, advisorId: session.user.id },
   })
   if (!client) {
     return NextResponse.json({ error: 'Client not found' }, { status: 404 })
@@ -54,14 +56,14 @@ export async function PATCH(
   }
 
   const updated = await prisma.clientCheckIn.upsert({
-    where: { clientId_checkInId: { clientId: params.id, checkInId } },
+    where: { clientId_checkInId: { clientId: id, checkInId } },
     update: {
       status,
       notes,
       completedAt: status === 'completed' ? new Date() : null,
     },
     create: {
-      clientId: params.id,
+      clientId: id,
       checkInId,
       status: status || 'pending',
       notes,

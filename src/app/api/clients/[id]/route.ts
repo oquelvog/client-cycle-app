@@ -7,15 +7,16 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const { id } = await params
   const client = await prisma.client.findFirst({
-    where: { id: params.id, advisorId: session.user.id },
+    where: { id, advisorId: session.user.id },
     include: {
       clientCheckIns: {
         include: {
@@ -43,18 +44,19 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const { id } = await params
   const body = await req.json()
   const { name, email, phone, tags, color, startDayOfYear, notes } = body
 
   const client = await prisma.client.findFirst({
-    where: { id: params.id, advisorId: session.user.id },
+    where: { id, advisorId: session.user.id },
   })
 
   if (!client) {
@@ -62,7 +64,7 @@ export async function PATCH(
   }
 
   const updated = await prisma.client.update({
-    where: { id: params.id },
+    where: { id },
     data: {
       ...(name !== undefined && { name }),
       ...(email !== undefined && { email }),
@@ -79,22 +81,23 @@ export async function PATCH(
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const { id } = await params
   const client = await prisma.client.findFirst({
-    where: { id: params.id, advisorId: session.user.id },
+    where: { id, advisorId: session.user.id },
   })
 
   if (!client) {
     return NextResponse.json({ error: 'Client not found' }, { status: 404 })
   }
 
-  await prisma.client.delete({ where: { id: params.id } })
+  await prisma.client.delete({ where: { id } })
 
   return NextResponse.json({ success: true })
 }

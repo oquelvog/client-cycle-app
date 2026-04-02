@@ -7,15 +7,16 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const { id } = await params
   const checkIns = await prisma.checkIn.findMany({
-    where: { milestoneId: params.id },
+    where: { milestoneId: id },
     include: { tasks: true },
     orderBy: { dayOfYear: 'asc' },
   })
@@ -25,13 +26,14 @@ export async function GET(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const { id } = await params
   const body = await req.json()
   const { title, description, dayOfYear } = body
 
@@ -42,18 +44,16 @@ export async function POST(
     )
   }
 
-  // Create check-in
   const checkIn = await prisma.checkIn.create({
     data: {
       title,
       description: description || null,
       dayOfYear,
-      milestoneId: params.id,
+      milestoneId: id,
     },
     include: { tasks: true },
   })
 
-  // Create ClientCheckIn records for all existing clients
   const clients = await prisma.client.findMany()
   for (const c of clients) {
     await prisma.clientCheckIn.upsert({
