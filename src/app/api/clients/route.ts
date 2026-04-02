@@ -14,13 +14,18 @@ export async function GET() {
   const clients = await prisma.client.findMany({
     where: { advisorId: session.user.id },
     include: {
+      currentMilestone: true,
       clientCheckIns: {
-        include: {
-          checkIn: true,
-        },
+        include: { checkIn: true },
         orderBy: { checkIn: { dayOfYear: 'desc' } },
       },
-      clientTasks: true,
+      clientTasks: {
+        include: {
+          task: {
+            include: { checkIn: { include: { milestone: true } } },
+          },
+        },
+      },
     },
     orderBy: { name: 'asc' },
   })
@@ -35,13 +40,12 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json()
-  const { name, email, phone, tags, color, startDayOfYear, notes } = body
+  const { name, email, phone, notes, currentMilestoneId } = body
 
   if (!name) {
     return NextResponse.json({ error: 'Name is required' }, { status: 400 })
   }
 
-  // Get all check-ins and tasks to initialize for new client
   const allCheckIns = await prisma.checkIn.findMany()
   const allTasks = await prisma.task.findMany()
 
@@ -50,28 +54,19 @@ export async function POST(req: NextRequest) {
       name,
       email: email || null,
       phone: phone || null,
-      tags: tags || '',
-      color: color || '#10B981',
-      startDayOfYear: startDayOfYear || 1,
       notes: notes || null,
+      currentMilestoneId: currentMilestoneId || null,
       advisorId: session.user.id,
       clientCheckIns: {
-        create: allCheckIns.map((ci) => ({
-          checkInId: ci.id,
-          status: 'pending',
-        })),
+        create: allCheckIns.map((ci) => ({ checkInId: ci.id, status: 'pending' })),
       },
       clientTasks: {
-        create: allTasks.map((t) => ({
-          taskId: t.id,
-          status: 'pending',
-        })),
+        create: allTasks.map((t) => ({ taskId: t.id, status: 'pending' })),
       },
     },
     include: {
-      clientCheckIns: {
-        include: { checkIn: true },
-      },
+      currentMilestone: true,
+      clientCheckIns: { include: { checkIn: true } },
       clientTasks: true,
     },
   })

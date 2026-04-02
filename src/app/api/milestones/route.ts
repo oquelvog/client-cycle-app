@@ -31,13 +31,10 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json()
-  const { title, description, dayOfYear, color } = body
+  const { title, description, dayOfYear, endDayOfYear, durationType, color } = body
 
   if (!title || dayOfYear === undefined) {
-    return NextResponse.json(
-      { error: 'title and dayOfYear are required' },
-      { status: 400 }
-    )
+    return NextResponse.json({ error: 'title and dayOfYear are required' }, { status: 400 })
   }
 
   const milestone = await prisma.milestone.create({
@@ -45,6 +42,8 @@ export async function POST(req: NextRequest) {
       title,
       description: description || null,
       dayOfYear,
+      endDayOfYear: endDayOfYear || 0,
+      durationType: durationType || 'specific_date',
       color: color || '#3B82F6',
     },
     include: { checkIns: { include: { tasks: true } } },

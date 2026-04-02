@@ -18,19 +18,21 @@ export async function GET(
   const client = await prisma.client.findFirst({
     where: { id, advisorId: session.user.id },
     include: {
+      currentMilestone: true,
       clientCheckIns: {
         include: {
           checkIn: {
-            include: {
-              milestone: true,
-              tasks: true,
-            },
+            include: { milestone: true, tasks: true },
           },
         },
         orderBy: { checkIn: { dayOfYear: 'asc' } },
       },
       clientTasks: {
-        include: { task: true },
+        include: {
+          task: {
+            include: { checkIn: { include: { milestone: true } } },
+          },
+        },
       },
     },
   })
@@ -53,7 +55,7 @@ export async function PATCH(
 
   const { id } = await params
   const body = await req.json()
-  const { name, email, phone, tags, color, startDayOfYear, notes } = body
+  const { name, email, phone, notes, currentMilestoneId } = body
 
   const client = await prisma.client.findFirst({
     where: { id, advisorId: session.user.id },
@@ -69,11 +71,13 @@ export async function PATCH(
       ...(name !== undefined && { name }),
       ...(email !== undefined && { email }),
       ...(phone !== undefined && { phone }),
-      ...(tags !== undefined && { tags }),
-      ...(color !== undefined && { color }),
-      ...(startDayOfYear !== undefined && { startDayOfYear }),
       ...(notes !== undefined && { notes }),
+      // Allow explicit null to clear milestone
+      ...(currentMilestoneId !== undefined && {
+        currentMilestoneId: currentMilestoneId || null,
+      }),
     },
+    include: { currentMilestone: true },
   })
 
   return NextResponse.json(updated)
@@ -98,6 +102,5 @@ export async function DELETE(
   }
 
   await prisma.client.delete({ where: { id } })
-
   return NextResponse.json({ success: true })
 }
