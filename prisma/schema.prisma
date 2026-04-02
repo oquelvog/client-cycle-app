@@ -1,0 +1,133 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  name      String?
+  password  String
+  role      String    @default("advisor")
+  createdAt DateTime  @default(now())
+  clients   Client[]
+  sessions  Session[]
+  accounts  Account[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Milestone {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  dayOfYear   Int
+  color       String    @default("#3B82F6")
+  createdAt   DateTime  @default(now())
+  checkIns    CheckIn[]
+}
+
+model CheckIn {
+  id             String          @id @default(cuid())
+  title          String
+  description    String?
+  dayOfYear      Int
+  milestoneId    String
+  milestone      Milestone       @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  tasks          Task[]
+  clientCheckIns ClientCheckIn[]
+  createdAt      DateTime        @default(now())
+}
+
+model Task {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  checkInId   String
+  checkIn     CheckIn      @relation(fields: [checkInId], references: [id], onDelete: Cascade)
+  clientTasks ClientTask[]
+  createdAt   DateTime     @default(now())
+}
+
+model Client {
+  id             String          @id @default(cuid())
+  name           String
+  email          String?
+  phone          String?
+  tags           String          @default("")
+  color          String          @default("#10B981")
+  startDayOfYear Int             @default(1)
+  advisorId      String
+  advisor        User            @relation(fields: [advisorId], references: [id])
+  createdAt      DateTime        @default(now())
+  clientCheckIns ClientCheckIn[]
+  clientTasks    ClientTask[]
+  notes          String?
+}
+
+model ClientCheckIn {
+  id          String    @id @default(cuid())
+  clientId    String
+  checkInId   String
+  status      String    @default("pending")
+  completedAt DateTime?
+  notes       String?
+  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  checkIn     CheckIn   @relation(fields: [checkInId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@unique([clientId, checkInId])
+}
+
+model ClientTask {
+  id          String    @id @default(cuid())
+  clientId    String
+  taskId      String
+  status      String    @default("pending")
+  completedAt DateTime?
+  notes       String?
+  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@unique([clientId, taskId])
+}
