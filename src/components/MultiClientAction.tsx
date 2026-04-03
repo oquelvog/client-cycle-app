@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 
 interface Task { id: string; title: string }
 interface CheckIn { id: string; title: string; tasks: Task[] }
-interface Milestone { id: string; title: string; checkIns: CheckIn[] }
+interface Milestone { id: string; title: string; color?: string; checkIns: CheckIn[] }
 interface Client { id: string; name: string; currentMilestoneId: string | null }
 
 interface Props {
