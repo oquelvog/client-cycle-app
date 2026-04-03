@@ -5,6 +5,28 @@ import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { id } = await params
+  const milestone = await prisma.milestone.findUnique({
+    where: { id },
+    include: { checkIns: { include: { tasks: true }, orderBy: { dayOfYear: 'asc' } } },
+  })
+
+  if (!milestone) {
+    return NextResponse.json({ error: 'Milestone not found' }, { status: 404 })
+  }
+
+  return NextResponse.json(milestone)
+}
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

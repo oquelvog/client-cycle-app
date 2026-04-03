@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import ClientDetailModal from './ClientDetailModal'
+import ChecklistModal from './ChecklistModal'
+import MultiClientAction from './MultiClientAction'
 
 // ── Constants ────────────────────────────────────────────────────
 const YEAR_HEIGHT = 2400          // px for the 12-month rolling window
@@ -77,7 +78,15 @@ export default function Timeline({ refreshKey }: { refreshKey: number }) {
   const [milestones, setMilestones] = useState<Milestone[]>([])
   const [clients, setClients]       = useState<Client[]>([])
   const [loading, setLoading]       = useState(true)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+
+  // Feature 1: Complete & Advance in-flight state
+  const [advancing, setAdvancing] = useState<string | null>(null)
+
+  // Feature 2: Checklist modal
+  const [checklistClient, setChecklistClient] = useState<{ id: string; name: string; milestoneId: string } | null>(null)
+
+  // Feature 3: Multi-client action modal
+  const [multiOpen, setMultiOpen] = useState(false)
 
   useEffect(() => { load() }, [refreshKey])
 
@@ -88,6 +97,17 @@ export default function Timeline({ refreshKey }: { refreshKey: number }) {
       if (mr.ok) setMilestones(await mr.json())
       if (cr.ok) setClients(await cr.json())
     } finally { setLoading(false) }
+  }
+
+  const handleCompleteAndAdvance = async (clientId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setAdvancing(clientId)
+    try {
+      await fetch(`/api/clients/${clientId}/complete-milestone`, { method: 'POST' })
+      await load()
+    } finally {
+      setAdvancing(null)
+    }
   }
 
   const { today, start: windowStart, end: windowEnd } = getWindow()
@@ -149,9 +169,19 @@ export default function Timeline({ refreshKey }: { refreshKey: number }) {
       {/* ── Sticky header ── */}
       <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between flex-shrink-0">
         <h1 className="text-lg font-bold text-gray-900">Annua — Rolling 12-Month Timeline</h1>
-        <span className="text-sm text-gray-500">
-          {today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-500">
+            {today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+          </span>
+          {/* Feature 3: Multi-Client Action button */}
+          <button onClick={() => setMultiOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 text-white text-xs font-semibold rounded-lg hover:bg-slate-700 transition shadow-sm">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Bulk Action
+          </button>
+        </div>
       </div>
 
       {/* ── Gutter (stale clients >6 months) ── */}
@@ -167,7 +197,8 @@ export default function Timeline({ refreshKey }: { refreshKey: number }) {
             {gutterClients.map(c => {
               const m = c.currentMilestoneId ? milestoneMap.get(c.currentMilestoneId) : null
               return (
-                <button key={c.id} onClick={() => setSelectedId(c.id)}
+                <button key={c.id}
+                  onClick={() => c.currentMilestoneId && setChecklistClient({ id: c.id, name: c.name, milestoneId: c.currentMilestoneId })}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-red-300 rounded-full text-xs font-semibold text-red-800 hover:bg-red-50 hover:border-red-500 transition shadow-sm">
                   {c.name}
                   {m && <span className="text-red-400">· {m.title}</span>}
@@ -242,14 +273,33 @@ export default function Timeline({ refreshKey }: { refreshKey: number }) {
                     {tags.map(c => {
                       const total = c.clientTasks.filter(ct => ct.task.checkIn.milestone.id === m.id).length
                       const done  = c.clientTasks.filter(ct => ct.task.checkIn.milestone.id === m.id && ct.status === 'completed').length
+                      const isAdvancing = advancing === c.id
                       return (
-                        <button key={c.id} onClick={() => setSelectedId(c.id)}
-                          className="flex items-center gap-1.5 px-3 py-1 bg-white border border-gray-300 rounded-full text-xs font-medium text-gray-700 shadow-sm hover:border-blue-400 hover:shadow-md transition-all">
-                          {c.name}
-                          {total > 0 && (
-                            <span className={`font-semibold ${done === total ? 'text-green-600' : 'text-amber-600'}`}>{done}/{total}</span>
-                          )}
-                        </button>
+                        <div key={c.id} className="flex items-center gap-0.5">
+                          {/* Feature 2: click name → checklist modal */}
+                          <button
+                            onClick={() => setChecklistClient({ id: c.id, name: c.name, milestoneId: m.id })}
+                            className="flex items-center gap-1.5 pl-3 pr-2 py-1 bg-white border border-gray-300 rounded-l-full text-xs font-medium text-gray-700 shadow-sm hover:border-blue-400 hover:shadow-md transition-all">
+                            {c.name}
+                            {total > 0 && (
+                              <span className={`font-semibold ${done === total ? 'text-green-600' : 'text-amber-600'}`}>{done}/{total}</span>
+                            )}
+                          </button>
+                          {/* Feature 1: Complete & Advance button */}
+                          <button
+                            onClick={(e) => handleCompleteAndAdvance(c.id, e)}
+                            disabled={isAdvancing}
+                            title="Complete all tasks & advance to next milestone"
+                            className="flex items-center justify-center w-7 h-7 bg-white border border-l-0 border-gray-300 rounded-r-full text-gray-400 shadow-sm hover:bg-green-50 hover:border-green-400 hover:text-green-600 transition-all disabled:opacity-50">
+                            {isAdvancing ? (
+                              <div className="w-3 h-3 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                              </svg>
+                            )}
+                          </button>
+                        </div>
                       )
                     })}
                   </div>
@@ -263,7 +313,7 @@ export default function Timeline({ refreshKey }: { refreshKey: number }) {
             <div className="absolute left-0 right-0 z-10 flex flex-wrap gap-2 items-center px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg" style={{ top: YEAR_HEIGHT + 10 }}>
               <span className="text-xs font-semibold text-amber-700">No milestone assigned:</span>
               {unassigned.map(c => (
-                <button key={c.id} onClick={() => setSelectedId(c.id)}
+                <button key={c.id} onClick={() => setChecklistClient({ id: c.id, name: c.name, milestoneId: '' })}
                   className="px-3 py-1 bg-white border border-amber-300 rounded-full text-xs font-medium text-amber-800 hover:border-amber-500 transition">
                   {c.name}
                 </button>
@@ -273,7 +323,21 @@ export default function Timeline({ refreshKey }: { refreshKey: number }) {
         </div>
       </div>
 
-      <ClientDetailModal clientId={selectedId} onClose={() => setSelectedId(null)} onUpdate={load} />
+      {/* Feature 2: Checklist modal */}
+      <ChecklistModal
+        clientId={checklistClient?.id ?? null}
+        clientName={checklistClient?.name ?? ''}
+        milestoneId={checklistClient?.milestoneId ?? null}
+        onClose={() => setChecklistClient(null)}
+        onAdvanced={load}
+      />
+
+      {/* Feature 3: Multi-client action modal */}
+      <MultiClientAction
+        open={multiOpen}
+        onClose={() => setMultiOpen(false)}
+        onDone={load}
+      />
     </>
   )
 }

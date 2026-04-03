@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { checkAndAutoAdvance } from '@/lib/advance'
 
 export const dynamic = 'force-dynamic'
 
@@ -70,5 +71,13 @@ export async function PATCH(
     },
   })
 
-  return NextResponse.json(updated)
+  let advanced = false
+  let nextMilestone = null
+  if (status === 'completed') {
+    const result = await checkAndAutoAdvance(id)
+    advanced = result.advanced
+    nextMilestone = result.nextMilestone
+  }
+
+  return NextResponse.json({ task: updated, advanced, nextMilestone })
 }
