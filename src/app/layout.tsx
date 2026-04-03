@@ -11,8 +11,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <title>Client Engagement Timeline</title>
-        <meta name="description" content="Financial advisor client engagement timeline management" />
+        <title>Annua</title>
+        <meta name="description" content="Annual client engagement cycle management" />
       </head>
       <body>
         <SessionProvider>{children}</SessionProvider>
