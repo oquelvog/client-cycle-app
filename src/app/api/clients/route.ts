@@ -11,22 +11,6 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Jan 1 rollback: once per year, decrement all clients' cycleYear by 1
-  const currentYear = new Date().getFullYear()
-  const user = await prisma.user.findUnique({ where: { id: session.user.id } })
-  if (user && user.lastRollbackYear < currentYear) {
-    await prisma.$transaction([
-      prisma.client.updateMany({
-        where: { advisorId: session.user.id, cycleYear: { gt: 0 } },
-        data: { cycleYear: { decrement: 1 } },
-      }),
-      prisma.user.update({
-        where: { id: session.user.id },
-        data: { lastRollbackYear: currentYear },
-      }),
-    ])
-  }
-
   const clients = await prisma.client.findMany({
     where: { advisorId: session.user.id },
     include: {

@@ -48,13 +48,13 @@ export async function POST(
   )
 
   // Advance to the next milestone (wraps around if this was the last one)
-  const next = await getNextMilestone(client.currentMilestoneId)
+  const { milestone: next, isWrapAround } = await getNextMilestone(client.currentMilestoneId)
 
   const updated = await prisma.client.update({
     where: { id },
     data: {
       currentMilestoneId: next ? next.id : client.currentMilestoneId,
-      ...(next && { cycleYear: new Date().getFullYear() }),
+      ...(next && isWrapAround && client.cycleYear > 0 && { cycleYear: client.cycleYear + 1 }),
     },
     include: { currentMilestone: true },
   })

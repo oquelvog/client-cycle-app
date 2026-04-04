@@ -40,29 +40,31 @@ export async function checkAllMilestoneTasksComplete(clientId: string): Promise<
 }
 
 /**
- * Returns the next milestone after the given one (by dayOfYear order).
- * Wraps around to the first milestone when the client finishes the last one.
+ * Returns the next milestone after the given one (by dayOfYear order),
+ * plus whether this is a year wrap-around (last → first milestone).
  */
-export async function getNextMilestone(currentMilestoneId: string) {
+export async function getNextMilestone(currentMilestoneId: string): Promise<{ milestone: Awaited<ReturnType<typeof prisma.milestone.findFirst>>; isWrapAround: boolean }> {
   const current = await prisma.milestone.findUnique({ where: { id: currentMilestoneId } })
-  if (!current) return null
+  if (!current) return { milestone: null, isWrapAround: false }
 
   const next = await prisma.milestone.findFirst({
     where: { dayOfYear: { gt: current.dayOfYear } },
     orderBy: { dayOfYear: 'asc' },
   })
-  if (next) return next
+  if (next) return { milestone: next, isWrapAround: false }
 
   // Wrap around: annual cycle restarts at the first milestone
-  return prisma.milestone.findFirst({
+  const first = await prisma.milestone.findFirst({
     where: { id: { not: currentMilestoneId } },
     orderBy: { dayOfYear: 'asc' },
   })
+  return { milestone: first, isWrapAround: true }
 }
 
 /**
  * Checks whether all tasks are done, advances the client if so, and resets
  * the new milestone's tasks to pending. Used by the bulk-task route.
+ * Only a year wrap-around increments cycleYear.
  */
 export async function checkAndAutoAdvance(clientId: string) {
   const allDone = await checkAllMilestoneTasksComplete(clientId)
@@ -71,12 +73,15 @@ export async function checkAndAutoAdvance(clientId: string) {
   const client = await prisma.client.findUnique({ where: { id: clientId } })
   if (!client?.currentMilestoneId) return { advanced: false, nextMilestone: null }
 
-  const next = await getNextMilestone(client.currentMilestoneId)
+  const { milestone: next, isWrapAround } = await getNextMilestone(client.currentMilestoneId)
   if (!next) return { advanced: false, nextMilestone: null }
 
   await prisma.client.update({
     where: { id: clientId },
-    data: { currentMilestoneId: next.id, cycleYear: new Date().getFullYear() },
+    data: {
+      currentMilestoneId: next.id,
+      ...(isWrapAround && client.cycleYear > 0 && { cycleYear: client.cycleYear + 1 }),
+    },
   })
 
   await resetMilestoneTasks(clientId, next.id)

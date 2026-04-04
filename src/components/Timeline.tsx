@@ -90,19 +90,28 @@ export default function Timeline({ refreshKey }: { refreshKey: number }) {
   // Bulk action modal
   const [multiOpen, setMultiOpen] = useState(false)
 
-  // Year badge update in progress
+  // Year badge dropdown
+  const [yearDropdownOpen, setYearDropdownOpen] = useState<string | null>(null)
   const [updatingYear, setUpdatingYear] = useState<string | null>(null)
 
   useEffect(() => { load() }, [refreshKey])
 
-  const handleUpdateYear = async (clientId: string) => {
+  useEffect(() => {
+    if (!yearDropdownOpen) return
+    const close = () => setYearDropdownOpen(null)
+    document.addEventListener('click', close)
+    return () => document.removeEventListener('click', close)
+  }, [yearDropdownOpen])
+
+  const handleUpdateYear = async (clientId: string, year: number) => {
     if (updatingYear) return
     setUpdatingYear(clientId)
+    setYearDropdownOpen(null)
     try {
       await fetch(`/api/clients/${clientId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cycleYear: new Date().getFullYear() }),
+        body: JSON.stringify({ cycleYear: year }),
       })
       await load()
     } finally {
@@ -307,20 +316,38 @@ export default function Timeline({ refreshKey }: { refreshKey: number }) {
                               <span className={`font-semibold ${done === total ? 'text-green-600' : 'text-amber-600'}`}>{done}/{total}</span>
                             )}
                           </button>
-                          {/* Year badge → click to set cycleYear to current year */}
-                          <button
-                            onClick={() => handleUpdateYear(c.id)}
-                            disabled={!!updatingYear}
-                            title={c.cycleYear < currentYear ? `Cycle year is ${c.cycleYear || '—'} — click to update to ${currentYear}` : `Cycle year: ${c.cycleYear}`}
-                            className={`flex items-center justify-center px-1.5 py-1 h-7 border border-l-0 text-[10px] font-bold transition-all disabled:opacity-50 ${
-                              c.cycleYear > 0 && c.cycleYear < currentYear
-                                ? 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100 hover:border-amber-500'
-                                : 'bg-white border-gray-300 text-gray-400 hover:bg-gray-50 hover:border-gray-400'
-                            }`}>
-                            {updatingYear === c.id
-                              ? <div className="w-2.5 h-2.5 border border-current border-t-transparent rounded-full animate-spin" />
-                              : (c.cycleYear > 0 ? c.cycleYear : '—')}
-                          </button>
+                          {/* Year badge → opens dropdown to pick current or next year */}
+                          <div className="relative">
+                            <button
+                              onClick={() => setYearDropdownOpen(yearDropdownOpen === c.id ? null : c.id)}
+                              disabled={!!updatingYear}
+                              title={c.cycleYear > 0 && c.cycleYear < currentYear ? `Cycle year ${c.cycleYear} — click to update` : `Cycle year: ${c.cycleYear || '—'}`}
+                              className={`flex items-center justify-center px-1.5 py-1 h-7 border border-l-0 text-[10px] font-bold transition-all disabled:opacity-50 ${
+                                c.cycleYear > 0 && c.cycleYear < currentYear
+                                  ? 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100 hover:border-amber-500'
+                                  : 'bg-white border-gray-300 text-gray-400 hover:bg-gray-50 hover:border-gray-400'
+                              }`}>
+                              {updatingYear === c.id
+                                ? <div className="w-2.5 h-2.5 border border-current border-t-transparent rounded-full animate-spin" />
+                                : (c.cycleYear > 0 ? c.cycleYear : '—')}
+                            </button>
+                            {yearDropdownOpen === c.id && (
+                              <div
+                                className="absolute top-full left-0 mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[68px]"
+                                onClick={e => e.stopPropagation()}>
+                                {[currentYear, currentYear + 1].map(y => (
+                                  <button
+                                    key={y}
+                                    onClick={() => handleUpdateYear(c.id, y)}
+                                    className={`w-full px-3 py-1.5 text-xs text-left transition-colors hover:bg-blue-50 ${
+                                      c.cycleYear === y ? 'font-bold text-blue-600' : 'text-gray-700'
+                                    }`}>
+                                    {y}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                           {/* Arrow → opens task panel */}
                           <button
                             onClick={() => setTaskPanelClient({ id: c.id, name: c.name, milestoneId: m.id, cycleYear: c.cycleYear })}

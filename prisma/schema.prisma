@@ -14,7 +14,6 @@ model User {
   password         String
   role             String        @default("advisor")
   createdAt        DateTime      @default(now())
-  lastRollbackYear Int           @default(0)
   clients          Client[]
   sessions         Session[]
   accounts         Account[]
