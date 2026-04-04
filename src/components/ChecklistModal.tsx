@@ -130,7 +130,7 @@ export default function ChecklistModal({ clientId, clientName, milestoneId, onCl
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* ── Header ── */}
@@ -244,35 +244,32 @@ export default function ChecklistModal({ clientId, clientName, milestoneId, onCl
 
         {/* ── Confirmation dialog (rendered over the modal) ── */}
         {confirm && (
-          <div className="absolute inset-0 rounded-2xl bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center gap-5 p-8 text-center">
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-              </svg>
-            </div>
-            <div>
-              <p className="font-bold text-gray-900 text-base mb-1">Ready to advance?</p>
-              <p className="text-sm text-gray-600 leading-relaxed">
-                All tasks are marked complete.{' '}
-                <span className="font-medium text-gray-800">{clientName}</span> will move to the next milestone.
-              </p>
-            </div>
-            <div className="flex gap-3 w-full">
-              <button
-                onClick={() => setConfirm(null)}
-                disabled={advancing}
-                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={doAdvance}
-                disabled={advancing}
-                className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-xl text-sm font-semibold text-white transition disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {advancing && <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-                Continue &amp; Advance
-              </button>
+          <div className="absolute inset-0 rounded-2xl bg-black/30 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-xs p-5 flex flex-col gap-4">
+              <div>
+                <p className="font-bold text-gray-900 text-sm mb-1">Advance this household?</p>
+                <p className="text-sm text-gray-600 leading-snug">
+                  All tasks are marked complete.{' '}
+                  <span className="font-medium text-gray-800">{clientName}</span> will move to the next milestone.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setConfirm(null)}
+                  disabled={advancing}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={doAdvance}
+                  disabled={advancing}
+                  className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  {advancing && <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                  Continue
+                </button>
+              </div>
             </div>
           </div>
         )}

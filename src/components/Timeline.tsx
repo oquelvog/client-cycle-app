@@ -107,7 +107,14 @@ export default function Timeline({ refreshKey }: { refreshKey: number }) {
   // Build milestone map
   const milestoneMap = useMemo(() => new Map(milestones.map(m => [m.id, m])), [milestones])
 
-  // Separate clients into: gutter (>6 months stale) vs timeline
+  // Separate clients into: gutter (>6 months stale) vs timeline.
+  //
+  // A client belongs on the timeline whenever their milestone has ANY
+  // occurrence within the rolling window — including future occurrences.
+  // Using mostRecentPast alone was wrong: if the next milestone falls in
+  // the future (e.g. July after advancing in April), mostRecentPast returns
+  // last July (~270 days ago) and incorrectly sends the client to the gutter.
+  // Only fall back to the staleness check when dayInWindow finds nothing.
   const { gutterClients, timelineClients } = useMemo(() => {
     const gutter: Client[] = []
     const timeline: Client[] = []
@@ -115,13 +122,19 @@ export default function Timeline({ refreshKey }: { refreshKey: number }) {
       if (!c.currentMilestoneId) { timeline.push(c); continue }
       const m = milestoneMap.get(c.currentMilestoneId)
       if (!m) { timeline.push(c); continue }
-      const past = mostRecentPast(m.dayOfYear, today)
-      const daysBehind = (today.getTime() - past.getTime()) / MS_PER_DAY
-      if (daysBehind > GUTTER_THRESHOLD_DAYS) gutter.push(c)
-      else timeline.push(c)
+      if (dayInWindow(m.dayOfYear, windowStart, windowEnd)) {
+        // Milestone is visible in the rolling window — always show on timeline
+        timeline.push(c)
+      } else {
+        // Milestone has no occurrence in the window; use staleness fallback
+        const past = mostRecentPast(m.dayOfYear, today)
+        const daysBehind = (today.getTime() - past.getTime()) / MS_PER_DAY
+        if (daysBehind > GUTTER_THRESHOLD_DAYS) gutter.push(c)
+        else timeline.push(c)
+      }
     }
     return { gutterClients: gutter, timelineClients: timeline }
-  }, [clients, milestoneMap, today])
+  }, [clients, milestoneMap, today, windowStart, windowEnd])
 
   // Group timeline clients by milestone
   const clientsByMilestone = useMemo(() => {
