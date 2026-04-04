@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { checkAndAutoAdvance } from '@/lib/advance'
+import { checkAllMilestoneTasksComplete } from '@/lib/advance'
 
 export const dynamic = 'force-dynamic'
 
@@ -71,13 +71,13 @@ export async function PATCH(
     },
   })
 
-  let advanced = false
-  let nextMilestone = null
+  // After marking a task complete, tell the caller whether all tasks are now done.
+  // Advancement is intentionally NOT triggered here — the frontend shows a
+  // confirmation dialog and calls POST /complete-milestone if the user confirms.
+  let allComplete = false
   if (status === 'completed') {
-    const result = await checkAndAutoAdvance(id)
-    advanced = result.advanced
-    nextMilestone = result.nextMilestone
+    allComplete = await checkAllMilestoneTasksComplete(id)
   }
 
-  return NextResponse.json({ task: updated, advanced, nextMilestone })
+  return NextResponse.json({ task: updated, allComplete })
 }

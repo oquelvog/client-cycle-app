@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import ChecklistModal from './ChecklistModal'
+import ClientDetailModal from './ClientDetailModal'
 import MultiClientAction from './MultiClientAction'
 
 // ── Constants ────────────────────────────────────────────────────
@@ -79,13 +80,13 @@ export default function Timeline({ refreshKey }: { refreshKey: number }) {
   const [clients, setClients]       = useState<Client[]>([])
   const [loading, setLoading]       = useState(true)
 
-  // Feature 1: Complete & Advance in-flight state
-  const [advancing, setAdvancing] = useState<string | null>(null)
+  // Tag click → household info panel
+  const [infoClientId, setInfoClientId] = useState<string | null>(null)
 
-  // Feature 2: Checklist modal
-  const [checklistClient, setChecklistClient] = useState<{ id: string; name: string; milestoneId: string } | null>(null)
+  // Arrow click → task panel for current milestone
+  const [taskPanelClient, setTaskPanelClient] = useState<{ id: string; name: string; milestoneId: string } | null>(null)
 
-  // Feature 3: Multi-client action modal
+  // Bulk action modal
   const [multiOpen, setMultiOpen] = useState(false)
 
   useEffect(() => { load() }, [refreshKey])
@@ -97,17 +98,6 @@ export default function Timeline({ refreshKey }: { refreshKey: number }) {
       if (mr.ok) setMilestones(await mr.json())
       if (cr.ok) setClients(await cr.json())
     } finally { setLoading(false) }
-  }
-
-  const handleCompleteAndAdvance = async (clientId: string, e: React.MouseEvent) => {
-    e.stopPropagation()
-    setAdvancing(clientId)
-    try {
-      await fetch(`/api/clients/${clientId}/complete-milestone`, { method: 'POST' })
-      await load()
-    } finally {
-      setAdvancing(null)
-    }
   }
 
   const { today, start: windowStart, end: windowEnd } = getWindow()
@@ -198,7 +188,7 @@ export default function Timeline({ refreshKey }: { refreshKey: number }) {
               const m = c.currentMilestoneId ? milestoneMap.get(c.currentMilestoneId) : null
               return (
                 <button key={c.id}
-                  onClick={() => c.currentMilestoneId && setChecklistClient({ id: c.id, name: c.name, milestoneId: c.currentMilestoneId })}
+                  onClick={() => setInfoClientId(c.id)}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-red-300 rounded-full text-xs font-semibold text-red-800 hover:bg-red-50 hover:border-red-500 transition shadow-sm">
                   {c.name}
                   {m && <span className="text-red-400">· {m.title}</span>}
@@ -273,31 +263,26 @@ export default function Timeline({ refreshKey }: { refreshKey: number }) {
                     {tags.map(c => {
                       const total = c.clientTasks.filter(ct => ct.task.checkIn.milestone.id === m.id).length
                       const done  = c.clientTasks.filter(ct => ct.task.checkIn.milestone.id === m.id && ct.status === 'completed').length
-                      const isAdvancing = advancing === c.id
                       return (
                         <div key={c.id} className="flex items-center gap-0.5">
-                          {/* Feature 2: click name → checklist modal */}
+                          {/* Tag → opens household info panel */}
                           <button
-                            onClick={() => setChecklistClient({ id: c.id, name: c.name, milestoneId: m.id })}
-                            className="flex items-center gap-1.5 pl-3 pr-2 py-1 bg-white border border-gray-300 rounded-l-full text-xs font-medium text-gray-700 shadow-sm hover:border-blue-400 hover:shadow-md transition-all">
+                            onClick={() => setInfoClientId(c.id)}
+                            className="flex items-center gap-1.5 pl-3 pr-2 py-1 bg-white border border-gray-300 rounded-l-full text-xs font-medium text-gray-700 shadow-sm hover:border-blue-400 hover:shadow-md transition-all"
+                            title="View household details">
                             {c.name}
                             {total > 0 && (
                               <span className={`font-semibold ${done === total ? 'text-green-600' : 'text-amber-600'}`}>{done}/{total}</span>
                             )}
                           </button>
-                          {/* Feature 1: Complete & Advance button */}
+                          {/* Arrow → opens task panel */}
                           <button
-                            onClick={(e) => handleCompleteAndAdvance(c.id, e)}
-                            disabled={isAdvancing}
-                            title="Complete all tasks & advance to next milestone"
-                            className="flex items-center justify-center w-7 h-7 bg-white border border-l-0 border-gray-300 rounded-r-full text-gray-400 shadow-sm hover:bg-green-50 hover:border-green-400 hover:text-green-600 transition-all disabled:opacity-50">
-                            {isAdvancing ? (
-                              <div className="w-3 h-3 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
-                            ) : (
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                              </svg>
-                            )}
+                            onClick={() => setTaskPanelClient({ id: c.id, name: c.name, milestoneId: m.id })}
+                            title="View tasks & advance"
+                            className="flex items-center justify-center w-7 h-7 bg-white border border-l-0 border-gray-300 rounded-r-full text-gray-400 shadow-sm hover:bg-blue-50 hover:border-blue-400 hover:text-blue-600 transition-all">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                            </svg>
                           </button>
                         </div>
                       )
@@ -308,12 +293,12 @@ export default function Timeline({ refreshKey }: { refreshKey: number }) {
             )
           })}
 
-          {/* Unassigned & not-in-gutter tag row */}
+          {/* Unassigned tag row */}
           {unassigned.length > 0 && (
             <div className="absolute left-0 right-0 z-10 flex flex-wrap gap-2 items-center px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg" style={{ top: YEAR_HEIGHT + 10 }}>
               <span className="text-xs font-semibold text-amber-700">No milestone assigned:</span>
               {unassigned.map(c => (
-                <button key={c.id} onClick={() => setChecklistClient({ id: c.id, name: c.name, milestoneId: '' })}
+                <button key={c.id} onClick={() => setInfoClientId(c.id)}
                   className="px-3 py-1 bg-white border border-amber-300 rounded-full text-xs font-medium text-amber-800 hover:border-amber-500 transition">
                   {c.name}
                 </button>
@@ -323,16 +308,23 @@ export default function Timeline({ refreshKey }: { refreshKey: number }) {
         </div>
       </div>
 
-      {/* Feature 2: Checklist modal */}
+      {/* Household info panel (tag click) */}
+      <ClientDetailModal
+        clientId={infoClientId}
+        onClose={() => setInfoClientId(null)}
+        onUpdate={load}
+      />
+
+      {/* Task panel (arrow click) */}
       <ChecklistModal
-        clientId={checklistClient?.id ?? null}
-        clientName={checklistClient?.name ?? ''}
-        milestoneId={checklistClient?.milestoneId ?? null}
-        onClose={() => setChecklistClient(null)}
+        clientId={taskPanelClient?.id ?? null}
+        clientName={taskPanelClient?.name ?? ''}
+        milestoneId={taskPanelClient?.milestoneId ?? null}
+        onClose={() => setTaskPanelClient(null)}
         onAdvanced={load}
       />
 
-      {/* Feature 3: Multi-client action modal */}
+      {/* Bulk action modal */}
       <MultiClientAction
         open={multiOpen}
         onClose={() => setMultiOpen(false)}

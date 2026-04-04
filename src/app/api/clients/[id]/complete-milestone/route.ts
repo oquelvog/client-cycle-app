@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { getNextMilestone } from '@/lib/advance'
+import { getNextMilestone, resetMilestoneTasks } from '@/lib/advance'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,7 +36,7 @@ export async function POST(
 
   const tasks = client.currentMilestone.checkIns.flatMap(ci => ci.tasks)
 
-  // Mark all tasks complete
+  // Mark all tasks in the current milestone complete
   await Promise.all(
     tasks.map(t =>
       prisma.clientTask.upsert({
@@ -47,17 +47,19 @@ export async function POST(
     )
   )
 
-  // Always advance — getNextMilestone wraps around to the first milestone
-  // when the client has completed the last one in the sequence
+  // Advance to the next milestone (wraps around if this was the last one)
   const next = await getNextMilestone(client.currentMilestoneId)
 
   const updated = await prisma.client.update({
     where: { id },
-    // Only update the milestone if a next one was found; keeps current if
-    // there is genuinely only one milestone in the system
     data: { currentMilestoneId: next ? next.id : client.currentMilestoneId },
     include: { currentMilestone: true },
   })
+
+  // Reset the new milestone's tasks so it starts with a clean checklist
+  if (next) {
+    await resetMilestoneTasks(id, next.id)
+  }
 
   return NextResponse.json({
     client: updated,
