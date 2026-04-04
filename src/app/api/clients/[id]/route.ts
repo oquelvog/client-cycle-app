@@ -55,7 +55,7 @@ export async function PATCH(
 
   const { id } = await params
   const body = await req.json()
-  const { name, notes, currentMilestoneId, reviewCycleId } = body
+  const { name, notes, currentMilestoneId, reviewCycleId, cycleYear } = body
 
   const client = await prisma.client.findFirst({
     where: { id, advisorId: session.user.id },
@@ -76,6 +76,7 @@ export async function PATCH(
       ...(reviewCycleId !== undefined && {
         reviewCycleId: reviewCycleId || null,
       }),
+      ...(cycleYear !== undefined && { cycleYear }),
     },
     include: { currentMilestone: true, reviewCycle: { select: { id: true, name: true } } },
   })

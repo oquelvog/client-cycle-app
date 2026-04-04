@@ -29,11 +29,12 @@ interface Props {
   clientId: string | null
   clientName: string
   milestoneId: string | null
+  cycleYear: number
   onClose: () => void
   onAdvanced: () => void
 }
 
-export default function ChecklistModal({ clientId, clientName, milestoneId, onClose, onAdvanced }: Props) {
+export default function ChecklistModal({ clientId, clientName, milestoneId, cycleYear, onClose, onAdvanced }: Props) {
   const [milestone, setMilestone] = useState<Milestone | null>(null)
   const [taskStatuses, setTaskStatuses] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
@@ -45,6 +46,12 @@ export default function ChecklistModal({ clientId, clientName, milestoneId, onCl
 
   // Success state shown briefly after advancing
   const [advancedTo, setAdvancedTo] = useState<string | null>(null)
+
+  // Passive year prompt
+  const [showYearPrompt, setShowYearPrompt] = useState(false)
+  const [yearPromptDismissed, setYearPromptDismissed] = useState(false)
+  const [updatingYear, setUpdatingYear] = useState(false)
+  const currentYear = new Date().getFullYear()
 
   const load = useCallback(async () => {
     if (!clientId || !milestoneId) return
@@ -70,6 +77,8 @@ export default function ChecklistModal({ clientId, clientName, milestoneId, onCl
     if (clientId && milestoneId) {
       setConfirm(null)
       setAdvancedTo(null)
+      setShowYearPrompt(false)
+      setYearPromptDismissed(false)
       load()
     }
   }, [clientId, milestoneId, load])
@@ -95,6 +104,8 @@ export default function ChecklistModal({ clientId, clientName, milestoneId, onCl
         setTaskStatuses(prev => ({ ...prev, [taskId]: next }))
         if (data.allComplete) {
           setConfirm('individual')
+        } else if (next === 'completed' && cycleYear > 0 && cycleYear < currentYear && !yearPromptDismissed) {
+          setShowYearPrompt(true)
         }
       }
     } finally {
@@ -119,6 +130,23 @@ export default function ChecklistModal({ clientId, clientName, milestoneId, onCl
       }
     } finally {
       setAdvancing(false)
+    }
+  }
+
+  const doYearUpdate = async () => {
+    if (!clientId || updatingYear) return
+    setUpdatingYear(true)
+    try {
+      await fetch(`/api/clients/${clientId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cycleYear: currentYear }),
+      })
+      setShowYearPrompt(false)
+      setYearPromptDismissed(true)
+      onAdvanced()
+    } finally {
+      setUpdatingYear(false)
     }
   }
 
@@ -228,6 +256,34 @@ export default function ChecklistModal({ clientId, clientName, milestoneId, onCl
             </>
           )}
         </div>
+
+        {/* ── Passive year prompt ── */}
+        {showYearPrompt && !advancedTo && (
+          <div className="mx-4 mb-2 flex items-start gap-3 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs">
+            <svg className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <div className="flex-1 min-w-0">
+              <p className="text-amber-800 leading-snug">
+                This household is still assigned to <span className="font-semibold">{cycleYear}</span>. Update to <span className="font-semibold">{currentYear}</span>?
+              </p>
+              <div className="flex gap-2 mt-1.5">
+                <button
+                  onClick={doYearUpdate}
+                  disabled={updatingYear}
+                  className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-md transition disabled:opacity-50 flex items-center gap-1">
+                  {updatingYear && <div className="w-2.5 h-2.5 border border-white border-t-transparent rounded-full animate-spin" />}
+                  Update to {currentYear}
+                </button>
+                <button
+                  onClick={() => { setShowYearPrompt(false); setYearPromptDismissed(true) }}
+                  className="px-2.5 py-1 text-amber-700 hover:text-amber-900 font-medium rounded-md transition">
+                  Not now
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── Footer progress bar ── */}
         {!loading && !advancedTo && allTasks.length > 0 && (

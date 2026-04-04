@@ -52,7 +52,10 @@ export async function POST(
 
   const updated = await prisma.client.update({
     where: { id },
-    data: { currentMilestoneId: next ? next.id : client.currentMilestoneId },
+    data: {
+      currentMilestoneId: next ? next.id : client.currentMilestoneId,
+      ...(next && { cycleYear: new Date().getFullYear() }),
+    },
     include: { currentMilestone: true },
   })
 

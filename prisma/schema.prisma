@@ -8,16 +8,17 @@ datasource db {
 }
 
 model User {
-  id           String        @id @default(cuid())
-  email        String        @unique
-  name         String?
-  password     String
-  role         String        @default("advisor")
-  createdAt    DateTime      @default(now())
-  clients      Client[]
-  sessions     Session[]
-  accounts     Account[]
-  reviewCycles ReviewCycle[]
+  id               String        @id @default(cuid())
+  email            String        @unique
+  name             String?
+  password         String
+  role             String        @default("advisor")
+  createdAt        DateTime      @default(now())
+  lastRollbackYear Int           @default(0)
+  clients          Client[]
+  sessions         Session[]
+  accounts         Account[]
+  reviewCycles     ReviewCycle[]
 }
 
 model Account {
@@ -113,6 +114,7 @@ model Client {
   reviewCycle        ReviewCycle?    @relation(fields: [reviewCycleId], references: [id], onDelete: SetNull)
   currentMilestoneId String?
   currentMilestone   Milestone?      @relation(fields: [currentMilestoneId], references: [id], onDelete: SetNull)
+  cycleYear          Int             @default(0)
   createdAt          DateTime        @default(now())
   clientCheckIns     ClientCheckIn[]
   clientTasks        ClientTask[]

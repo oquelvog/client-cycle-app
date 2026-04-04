@@ -76,7 +76,7 @@ export async function checkAndAutoAdvance(clientId: string) {
 
   await prisma.client.update({
     where: { id: clientId },
-    data: { currentMilestoneId: next.id },
+    data: { currentMilestoneId: next.id, cycleYear: new Date().getFullYear() },
   })
 
   await resetMilestoneTasks(clientId, next.id)

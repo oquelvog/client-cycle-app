@@ -71,6 +71,7 @@ interface Milestone {
 interface Client {
   id: string; name: string
   currentMilestoneId: string | null
+  cycleYear: number
   clientTasks: { id: string; status: string; task: { id: string; title: string; checkIn: { milestone: { id: string } } } }[]
 }
 
@@ -84,12 +85,30 @@ export default function Timeline({ refreshKey }: { refreshKey: number }) {
   const [infoClientId, setInfoClientId] = useState<string | null>(null)
 
   // Arrow click → task panel for current milestone
-  const [taskPanelClient, setTaskPanelClient] = useState<{ id: string; name: string; milestoneId: string } | null>(null)
+  const [taskPanelClient, setTaskPanelClient] = useState<{ id: string; name: string; milestoneId: string; cycleYear: number } | null>(null)
 
   // Bulk action modal
   const [multiOpen, setMultiOpen] = useState(false)
 
+  // Year badge update in progress
+  const [updatingYear, setUpdatingYear] = useState<string | null>(null)
+
   useEffect(() => { load() }, [refreshKey])
+
+  const handleUpdateYear = async (clientId: string) => {
+    if (updatingYear) return
+    setUpdatingYear(clientId)
+    try {
+      await fetch(`/api/clients/${clientId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cycleYear: new Date().getFullYear() }),
+      })
+      await load()
+    } finally {
+      setUpdatingYear(null)
+    }
+  }
 
   const load = async () => {
     setLoading(true)
@@ -288,9 +307,23 @@ export default function Timeline({ refreshKey }: { refreshKey: number }) {
                               <span className={`font-semibold ${done === total ? 'text-green-600' : 'text-amber-600'}`}>{done}/{total}</span>
                             )}
                           </button>
+                          {/* Year badge → click to set cycleYear to current year */}
+                          <button
+                            onClick={() => handleUpdateYear(c.id)}
+                            disabled={!!updatingYear}
+                            title={c.cycleYear < currentYear ? `Cycle year is ${c.cycleYear || '—'} — click to update to ${currentYear}` : `Cycle year: ${c.cycleYear}`}
+                            className={`flex items-center justify-center px-1.5 py-1 h-7 border border-l-0 text-[10px] font-bold transition-all disabled:opacity-50 ${
+                              c.cycleYear > 0 && c.cycleYear < currentYear
+                                ? 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100 hover:border-amber-500'
+                                : 'bg-white border-gray-300 text-gray-400 hover:bg-gray-50 hover:border-gray-400'
+                            }`}>
+                            {updatingYear === c.id
+                              ? <div className="w-2.5 h-2.5 border border-current border-t-transparent rounded-full animate-spin" />
+                              : (c.cycleYear > 0 ? c.cycleYear : '—')}
+                          </button>
                           {/* Arrow → opens task panel */}
                           <button
-                            onClick={() => setTaskPanelClient({ id: c.id, name: c.name, milestoneId: m.id })}
+                            onClick={() => setTaskPanelClient({ id: c.id, name: c.name, milestoneId: m.id, cycleYear: c.cycleYear })}
                             title="View tasks & advance"
                             className="flex items-center justify-center w-7 h-7 bg-white border border-l-0 border-gray-300 rounded-r-full text-gray-400 shadow-sm hover:bg-blue-50 hover:border-blue-400 hover:text-blue-600 transition-all">
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -333,6 +366,7 @@ export default function Timeline({ refreshKey }: { refreshKey: number }) {
         clientId={taskPanelClient?.id ?? null}
         clientName={taskPanelClient?.name ?? ''}
         milestoneId={taskPanelClient?.milestoneId ?? null}
+        cycleYear={taskPanelClient?.cycleYear ?? 0}
         onClose={() => setTaskPanelClient(null)}
         onAdvanced={load}
       />
