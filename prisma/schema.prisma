@@ -114,6 +114,7 @@ model Client {
   currentMilestoneId String?
   currentMilestone   Milestone?      @relation(fields: [currentMilestoneId], references: [id], onDelete: SetNull)
   cycleYear          Int             @default(0)
+  lastContacted      DateTime?
   createdAt          DateTime        @default(now())
   clientCheckIns     ClientCheckIn[]
   clientTasks        ClientTask[]

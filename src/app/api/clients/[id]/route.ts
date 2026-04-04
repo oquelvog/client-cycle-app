@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { resetMilestoneTasks } from '@/lib/advance'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,7 +56,7 @@ export async function PATCH(
 
   const { id } = await params
   const body = await req.json()
-  const { name, notes, currentMilestoneId, reviewCycleId, cycleYear } = body
+  const { name, notes, currentMilestoneId, reviewCycleId, cycleYear, lastContacted } = body
 
   const client = await prisma.client.findFirst({
     where: { id, advisorId: session.user.id },
@@ -77,9 +78,19 @@ export async function PATCH(
         reviewCycleId: reviewCycleId || null,
       }),
       ...(cycleYear !== undefined && { cycleYear }),
+      ...(lastContacted !== undefined && {
+        lastContacted: lastContacted ? new Date(lastContacted) : null,
+      }),
     },
     include: { currentMilestone: true, reviewCycle: { select: { id: true, name: true } } },
   })
+
+  // If the milestone was manually changed, reset the new milestone's tasks so
+  // counts start fresh (same behaviour as the advance route).
+  const newMilestoneId = currentMilestoneId !== undefined ? (currentMilestoneId || null) : undefined
+  if (newMilestoneId && newMilestoneId !== client.currentMilestoneId) {
+    await resetMilestoneTasks(id, newMilestoneId)
+  }
 
   return NextResponse.json(updated)
 }

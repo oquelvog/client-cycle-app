@@ -33,7 +33,7 @@ interface ClientTask {
   status: string
   completedAt?: string
   notes?: string
-  task: Task & { checkIn: { id: string; dayOfYear: number } }
+  task: Task & { checkIn: { id: string; dayOfYear: number; milestone: { id: string } } }
 }
 
 interface Client {
@@ -43,7 +43,9 @@ interface Client {
   phone?: string
   color: string
   notes?: string
+  lastContacted?: string | null
   startDayOfYear: number
+  currentMilestoneId: string | null
   clientCheckIns: ClientCheckIn[]
   clientTasks: ClientTask[]
 }
@@ -62,6 +64,8 @@ export default function ClientDetailModal({ clientId, onClose, onUpdate }: Props
   const [updatingTask, setUpdatingTask] = useState<string | null>(null)
   const [updatingCheckIn, setUpdatingCheckIn] = useState<string | null>(null)
   const [expandedCheckIns, setExpandedCheckIns] = useState<Set<string>>(new Set())
+  const [editingLastContacted, setEditingLastContacted] = useState(false)
+  const [savingLastContacted, setSavingLastContacted] = useState(false)
 
   const today = getDayOfYear(new Date())
 
@@ -134,12 +138,32 @@ export default function ClientDetailModal({ clientId, onClose, onUpdate }: Props
     }
   }
 
+  const saveLastContacted = async (dateStr: string) => {
+    if (!client) return
+    setEditingLastContacted(false)
+    setSavingLastContacted(true)
+    try {
+      await fetch(`/api/clients/${client.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lastContacted: dateStr || null }),
+      })
+      await fetchClient()
+      onUpdate?.()
+    } finally {
+      setSavingLastContacted(false)
+    }
+  }
+
   if (!clientId) return null
 
   const getCompletionStats = () => {
     if (!client) return { completed: 0, total: 0, percent: 0 }
-    const total = client.clientTasks.length
-    const completed = client.clientTasks.filter((t) => t.status === 'completed').length
+    const milestoneTasks = client.currentMilestoneId
+      ? client.clientTasks.filter(t => t.task.checkIn.milestone.id === client.currentMilestoneId)
+      : []
+    const total = milestoneTasks.length
+    const completed = milestoneTasks.filter(t => t.status === 'completed').length
     return { completed, total, percent: total > 0 ? Math.round((completed / total) * 100) : 0 }
   }
 
@@ -233,17 +257,40 @@ export default function ClientDetailModal({ clientId, onClose, onUpdate }: Props
                   <p className="text-xs text-gray-500 mt-1">Complete</p>
                 </div>
                 <div className="bg-gray-50 rounded-xl p-4 text-center">
-                  <p className="text-lg font-bold text-gray-800">
-                    {lastDay ? formatDayOfYear(lastDay) : 'None'}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">Last Check-In</p>
+                  {editingLastContacted ? (
+                    <input
+                      type="date"
+                      defaultValue={client.lastContacted ? client.lastContacted.split('T')[0] : ''}
+                      onChange={e => e.target.value && saveLastContacted(e.target.value)}
+                      onBlur={() => setEditingLastContacted(false)}
+                      autoFocus
+                      className="text-sm border border-gray-300 rounded px-1 py-0.5 w-full text-center focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    />
+                  ) : (
+                    <button
+                      onClick={() => setEditingLastContacted(true)}
+                      className="group w-full"
+                      title="Click to set date"
+                    >
+                      {savingLastContacted ? (
+                        <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                      ) : (
+                        <p className="text-lg font-bold text-gray-800 group-hover:text-blue-600 transition">
+                          {client.lastContacted
+                            ? new Date(client.lastContacted.split('T')[0] + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                            : <span className="text-sm font-medium text-gray-400">Set date</span>}
+                        </p>
+                      )}
+                    </button>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">Last Contacted</p>
                 </div>
               </div>
 
               {/* Progress bar */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-sm font-medium text-gray-700">Overall Progress</span>
+                  <span className="text-sm font-medium text-gray-700">Current Milestone Progress</span>
                   <span className="text-sm text-gray-500">{stats.completed}/{stats.total} tasks</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
