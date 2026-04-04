@@ -1,23 +1,31 @@
 import { prisma } from './prisma'
 
 /**
- * Returns the next milestone after the given one (by dayOfYear order),
- * or null if the given milestone is already the last.
+ * Returns the next milestone after the given one (by dayOfYear order).
+ * If the current milestone is the last one, wraps around to the first —
+ * completing the final milestone of the year restarts the annual cycle.
  */
 export async function getNextMilestone(currentMilestoneId: string) {
   const current = await prisma.milestone.findUnique({ where: { id: currentMilestoneId } })
   if (!current) return null
-  return prisma.milestone.findFirst({
+
+  // Next milestone in sequence
+  const next = await prisma.milestone.findFirst({
     where: { dayOfYear: { gt: current.dayOfYear } },
+    orderBy: { dayOfYear: 'asc' },
+  })
+  if (next) return next
+
+  // Wrap around: return first milestone to restart the annual cycle
+  return prisma.milestone.findFirst({
+    where: { id: { not: currentMilestoneId } },
     orderBy: { dayOfYear: 'asc' },
   })
 }
 
 /**
- * Checks whether all tasks belonging to a client's current milestone are
- * complete. If they are, advances the client to the next milestone.
- *
- * Returns { advanced, nextMilestone } so callers can surface the change.
+ * Checks whether all tasks for a client's current milestone are complete.
+ * If so, advances the client to the next milestone.
  */
 export async function checkAndAutoAdvance(clientId: string) {
   const client = await prisma.client.findUnique({
@@ -43,7 +51,6 @@ export async function checkAndAutoAdvance(clientId: string) {
   const allDone = milestoneTasks.every(t =>
     clientTasks.find(ct => ct.taskId === t.id)?.status === 'completed'
   )
-
   if (!allDone) return { advanced: false, nextMilestone: null }
 
   const next = await getNextMilestone(client.currentMilestoneId)

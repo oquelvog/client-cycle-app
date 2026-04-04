@@ -47,12 +47,15 @@ export async function POST(
     )
   )
 
-  // Advance to next milestone
+  // Always advance — getNextMilestone wraps around to the first milestone
+  // when the client has completed the last one in the sequence
   const next = await getNextMilestone(client.currentMilestoneId)
 
   const updated = await prisma.client.update({
     where: { id },
-    data: { currentMilestoneId: next?.id ?? client.currentMilestoneId },
+    // Only update the milestone if a next one was found; keeps current if
+    // there is genuinely only one milestone in the system
+    data: { currentMilestoneId: next ? next.id : client.currentMilestoneId },
     include: { currentMilestone: true },
   })
 
