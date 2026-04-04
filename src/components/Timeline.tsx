@@ -394,7 +394,7 @@ export default function Timeline({ refreshKey }: { refreshKey: number }) {
         clientName={taskPanelClient?.name ?? ''}
         milestoneId={taskPanelClient?.milestoneId ?? null}
         cycleYear={taskPanelClient?.cycleYear ?? 0}
-        onClose={() => setTaskPanelClient(null)}
+        onClose={() => { setTaskPanelClient(null); load() }}
         onAdvanced={load}
       />
 

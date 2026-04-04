@@ -54,19 +54,21 @@ export async function POST(
     where: { id },
     data: {
       currentMilestoneId: next ? next.id : client.currentMilestoneId,
-      ...(next && isWrapAround && client.cycleYear > 0 && { cycleYear: client.cycleYear + 1 }),
+      // Increment cycleYear on any wrap-around, including single-milestone cycles
+      ...(isWrapAround && client.cycleYear > 0 && { cycleYear: client.cycleYear + 1 }),
     },
     include: { currentMilestone: true },
   })
 
-  // Reset the new milestone's tasks so it starts with a clean checklist
-  if (next) {
-    await resetMilestoneTasks(id, next.id)
-  }
+  // Always reset tasks for the destination milestone.
+  // When next is null (single-milestone cycle) the client stays at the same
+  // milestone, so reset that one — otherwise the tasks stay 'completed' forever.
+  const milestoneToReset = next?.id ?? client.currentMilestoneId
+  await resetMilestoneTasks(id, milestoneToReset)
 
   return NextResponse.json({
     client: updated,
-    advanced: !!next,
-    nextMilestone: next ?? null,
+    advanced: true,
+    nextMilestone: next ?? client.currentMilestone,
   })
 }

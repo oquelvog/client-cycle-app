@@ -74,17 +74,22 @@ export async function checkAndAutoAdvance(clientId: string) {
   if (!client?.currentMilestoneId) return { advanced: false, nextMilestone: null }
 
   const { milestone: next, isWrapAround } = await getNextMilestone(client.currentMilestoneId)
-  if (!next) return { advanced: false, nextMilestone: null }
 
   await prisma.client.update({
     where: { id: clientId },
     data: {
-      currentMilestoneId: next.id,
+      currentMilestoneId: next ? next.id : client.currentMilestoneId,
       ...(isWrapAround && client.cycleYear > 0 && { cycleYear: client.cycleYear + 1 }),
     },
   })
 
-  await resetMilestoneTasks(clientId, next.id)
+  // Always reset the destination milestone's tasks.
+  // When next is null (single-milestone setup), reset the current milestone so
+  // tasks don't remain permanently 'completed'.
+  const milestoneToReset = next?.id ?? client.currentMilestoneId
+  if (milestoneToReset) {
+    await resetMilestoneTasks(clientId, milestoneToReset)
+  }
 
   return { advanced: true, nextMilestone: next }
 }
