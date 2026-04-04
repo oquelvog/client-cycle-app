@@ -8,15 +8,16 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(cuid())
-  email     String    @unique
-  name      String?
-  password  String
-  role      String    @default("advisor")
-  createdAt DateTime  @default(now())
-  clients   Client[]
-  sessions  Session[]
-  accounts  Account[]
+  id           String        @id @default(cuid())
+  email        String        @unique
+  name         String?
+  password     String
+  role         String        @default("advisor")
+  createdAt    DateTime      @default(now())
+  clients      Client[]
+  sessions     Session[]
+  accounts     Account[]
+  reviewCycles ReviewCycle[]
 }
 
 model Account {
@@ -51,17 +52,29 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+model ReviewCycle {
+  id         String      @id @default(cuid())
+  name       String
+  advisorId  String
+  advisor    User        @relation(fields: [advisorId], references: [id])
+  createdAt  DateTime    @default(now())
+  milestones Milestone[]
+  clients    Client[]
+}
+
 model Milestone {
-  id           String    @id @default(cuid())
-  title        String
-  description  String?
-  dayOfYear    Int
-  endDayOfYear Int       @default(0)
-  durationType String    @default("specific_date")
-  color        String    @default("#3B82F6")
-  createdAt    DateTime  @default(now())
-  checkIns     CheckIn[]
-  clients      Client[]
+  id             String       @id @default(cuid())
+  title          String
+  description    String?
+  dayOfYear      Int
+  endDayOfYear   Int          @default(0)
+  durationType   String       @default("specific_date")
+  color          String       @default("#3B82F6")
+  reviewCycleId  String?
+  reviewCycle    ReviewCycle? @relation(fields: [reviewCycleId], references: [id], onDelete: SetNull)
+  createdAt      DateTime     @default(now())
+  checkIns       CheckIn[]
+  clients        Client[]
 }
 
 model CheckIn {
@@ -96,6 +109,8 @@ model Client {
   startDayOfYear     Int             @default(1)
   advisorId          String
   advisor            User            @relation(fields: [advisorId], references: [id])
+  reviewCycleId      String?
+  reviewCycle        ReviewCycle?    @relation(fields: [reviewCycleId], references: [id], onDelete: SetNull)
   currentMilestoneId String?
   currentMilestone   Milestone?      @relation(fields: [currentMilestoneId], references: [id], onDelete: SetNull)
   createdAt          DateTime        @default(now())

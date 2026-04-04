@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json()
-  const { title, description, dayOfYear, endDayOfYear, durationType, color } = body
+  const { title, description, dayOfYear, endDayOfYear, durationType, color, reviewCycleId } = body
 
   if (!title || dayOfYear === undefined) {
     return NextResponse.json({ error: 'title and dayOfYear are required' }, { status: 400 })
@@ -45,6 +45,7 @@ export async function POST(req: NextRequest) {
       endDayOfYear: endDayOfYear || 0,
       durationType: durationType || 'specific_date',
       color: color || '#3B82F6',
+      reviewCycleId: reviewCycleId || null,
     },
     include: { checkIns: { include: { tasks: true } } },
   })

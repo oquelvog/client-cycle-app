@@ -55,7 +55,7 @@ export async function PATCH(
 
   const { id } = await params
   const body = await req.json()
-  const { name, email, phone, notes, currentMilestoneId } = body
+  const { name, notes, currentMilestoneId, reviewCycleId } = body
 
   const client = await prisma.client.findFirst({
     where: { id, advisorId: session.user.id },
@@ -69,15 +69,15 @@ export async function PATCH(
     where: { id },
     data: {
       ...(name !== undefined && { name }),
-      ...(email !== undefined && { email }),
-      ...(phone !== undefined && { phone }),
       ...(notes !== undefined && { notes }),
-      // Allow explicit null to clear milestone
       ...(currentMilestoneId !== undefined && {
         currentMilestoneId: currentMilestoneId || null,
       }),
+      ...(reviewCycleId !== undefined && {
+        reviewCycleId: reviewCycleId || null,
+      }),
     },
-    include: { currentMilestone: true },
+    include: { currentMilestone: true, reviewCycle: { select: { id: true, name: true } } },
   })
 
   return NextResponse.json(updated)

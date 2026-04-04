@@ -15,6 +15,7 @@ export async function GET() {
     where: { advisorId: session.user.id },
     include: {
       currentMilestone: true,
+      reviewCycle: { select: { id: true, name: true } },
       clientCheckIns: {
         include: { checkIn: true },
         orderBy: { checkIn: { dayOfYear: 'desc' } },
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json()
-  const { name, email, phone, notes, currentMilestoneId } = body
+  const { name, notes, currentMilestoneId, reviewCycleId } = body
 
   if (!name) {
     return NextResponse.json({ error: 'Name is required' }, { status: 400 })
@@ -52,10 +53,9 @@ export async function POST(req: NextRequest) {
   const client = await prisma.client.create({
     data: {
       name,
-      email: email || null,
-      phone: phone || null,
       notes: notes || null,
       currentMilestoneId: currentMilestoneId || null,
+      reviewCycleId: reviewCycleId || null,
       advisorId: session.user.id,
       clientCheckIns: {
         create: allCheckIns.map((ci) => ({ checkInId: ci.id, status: 'pending' })),
@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
     },
     include: {
       currentMilestone: true,
+      reviewCycle: { select: { id: true, name: true } },
       clientCheckIns: { include: { checkIn: true } },
       clientTasks: true,
     },

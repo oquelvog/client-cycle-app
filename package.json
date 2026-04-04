@@ -18,7 +18,8 @@
     "next": "^15.2.0",
     "next-auth": "^4.24.11",
     "react": "^19",
-    "react-dom": "^19"
+    "react-dom": "^19",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

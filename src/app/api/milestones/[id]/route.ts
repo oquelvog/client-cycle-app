@@ -38,7 +38,7 @@ export async function PATCH(
 
   const { id } = await params
   const body = await req.json()
-  const { title, description, dayOfYear, endDayOfYear, durationType, color } = body
+  const { title, description, dayOfYear, endDayOfYear, durationType, color, reviewCycleId } = body
 
   const updated = await prisma.milestone.update({
     where: { id },
@@ -49,6 +49,7 @@ export async function PATCH(
       ...(endDayOfYear !== undefined && { endDayOfYear }),
       ...(durationType !== undefined && { durationType }),
       ...(color !== undefined && { color }),
+      ...(reviewCycleId !== undefined && { reviewCycleId: reviewCycleId || null }),
     },
     include: { checkIns: { include: { tasks: true } } },
   })
