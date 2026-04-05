@@ -1,160 +1,230 @@
 import { prisma } from "./prisma";
 
 /**
- * Seeds example data for a brand-new advisor account.
- * Called once on first login. Safe to call multiple times — the caller
- * must check user.onboarded before calling.
+ * Seeds four pre-loaded Touchpoint Cycles for a brand-new advisor account.
+ * Called once on first login via /api/data when user.onboarded === false.
  */
 export async function seedNewAdvisor(userId: string) {
-  // Review cycle
-  const cycle = await prisma.reviewCycle.create({
-    data: { name: "Semi-Annual Meeting Cycle", advisorId: userId },
+  // Quarter date ranges (day-of-year)
+  const Q1 = { dayOfYear: 1,   endDayOfYear: 90,  durationType: "quarter" as const };
+  const Q2 = { dayOfYear: 91,  endDayOfYear: 181, durationType: "quarter" as const };
+  const Q3 = { dayOfYear: 182, endDayOfYear: 273, durationType: "quarter" as const };
+  const Q4 = { dayOfYear: 274, endDayOfYear: 365, durationType: "quarter" as const };
+
+  // ── Cycle 1: Annual Review ─────────────────────────────────────────────────
+  const cycle1 = await prisma.reviewCycle.create({
+    data: { name: "Annual Review", advisorId: userId },
   });
 
-  // ── Milestones ──────────────────────────────────────────────────────────────
-  // Jan 15 = day 15 | Apr 1 = day 91, Apr 30 = day 120
-  // Jul 1  = day 182, Sep 30 = day 273 | Nov 15 = day 319
+  const c1m1 = await prisma.milestone.create({
+    data: { reviewCycleId: cycle1.id, title: "Annual Review Meeting", color: "#6366f1", order: 0, ...Q4 },
+  });
+  const c1ci1 = await prisma.checkIn.create({
+    data: { milestoneId: c1m1.id, title: c1m1.title, dayOfYear: Q4.dayOfYear },
+  });
+  const c1tasks = await Promise.all([
+    "Send pre-meeting agenda",
+    "Review investment policy statement",
+    "Rebalance portfolio",
+    "Review tax planning opportunities",
+    "Update goals and priorities",
+    "Hold annual review meeting",
+    "Send follow-up summary",
+  ].map((title) => prisma.task.create({ data: { checkInId: c1ci1.id, title } })));
 
-  const m1 = await prisma.milestone.create({
+  // Johnson Family → Q4 (only milestone)
+  const johnson = await prisma.client.create({
     data: {
-      reviewCycleId: cycle.id,
-      title: "Goals and Tax Prep",
-      dayOfYear: 15,
-      endDayOfYear: 15,
-      durationType: "specific_date",
-      color: "#6366f1",
-      order: 0,
-    },
-  });
-  const ci1 = await prisma.checkIn.create({
-    data: { milestoneId: m1.id, title: "Tax Prep Tasks", dayOfYear: 15 },
-  });
-  const m1tasks = await Promise.all([
-    prisma.task.create({ data: { checkInId: ci1.id, title: "Send annual survey" } }),
-    prisma.task.create({ data: { checkInId: ci1.id, title: "Request updated pay stubs" } }),
-    prisma.task.create({ data: { checkInId: ci1.id, title: "Send tax document checklist" } }),
-    prisma.task.create({ data: { checkInId: ci1.id, title: "Schedule planning meeting" } }),
-  ]);
-
-  const m2 = await prisma.milestone.create({
-    data: {
-      reviewCycleId: cycle.id,
-      title: "Spring Review",
-      dayOfYear: 91,
-      endDayOfYear: 120,
-      durationType: "month",
-      color: "#22c55e",
-      order: 1,
-    },
-  });
-  const ci2 = await prisma.checkIn.create({
-    data: { milestoneId: m2.id, title: "Spring Review Tasks", dayOfYear: 91 },
-  });
-  const m2tasks = await Promise.all([
-    prisma.task.create({ data: { checkInId: ci2.id, title: "Review investment allocation" } }),
-    prisma.task.create({ data: { checkInId: ci2.id, title: "Update risk profile" } }),
-    prisma.task.create({ data: { checkInId: ci2.id, title: "Review insurance coverage" } }),
-    prisma.task.create({ data: { checkInId: ci2.id, title: "Confirm beneficiary designations" } }),
-    prisma.task.create({ data: { checkInId: ci2.id, title: "Hold planning meeting" } }),
-  ]);
-
-  const m3 = await prisma.milestone.create({
-    data: {
-      reviewCycleId: cycle.id,
-      title: "Mid-Year Check-In",
-      dayOfYear: 182,
-      endDayOfYear: 273,
-      durationType: "quarter",
-      color: "#f97316",
-      order: 2,
-    },
-  });
-  const ci3 = await prisma.checkIn.create({
-    data: { milestoneId: m3.id, title: "Mid-Year Tasks", dayOfYear: 182 },
-  });
-  await Promise.all([
-    prisma.task.create({ data: { checkInId: ci3.id, title: "Review progress toward goals" } }),
-    prisma.task.create({ data: { checkInId: ci3.id, title: "Check tax withholding" } }),
-    prisma.task.create({ data: { checkInId: ci3.id, title: "Review estate documents" } }),
-    prisma.task.create({ data: { checkInId: ci3.id, title: "Send check-in email" } }),
-  ]);
-
-  const m4 = await prisma.milestone.create({
-    data: {
-      reviewCycleId: cycle.id,
-      title: "Year-End Planning",
-      dayOfYear: 319,
-      endDayOfYear: 319,
-      durationType: "specific_date",
-      color: "#8b5cf6",
-      order: 3,
-    },
-  });
-  const ci4 = await prisma.checkIn.create({
-    data: { milestoneId: m4.id, title: "Year-End Tasks", dayOfYear: 319 },
-  });
-  const m4tasks = await Promise.all([
-    prisma.task.create({ data: { checkInId: ci4.id, title: "Review tax loss harvesting opportunities" } }),
-    prisma.task.create({ data: { checkInId: ci4.id, title: "Max out retirement contributions" } }),
-    prisma.task.create({ data: { checkInId: ci4.id, title: "Update financial plan" } }),
-    prisma.task.create({ data: { checkInId: ci4.id, title: "Schedule year-end meeting" } }),
-  ]);
-
-  // ── Sample households ───────────────────────────────────────────────────────
-
-  // Anderson Family — Spring Review, 2026, 2/5 tasks complete
-  const anderson = await prisma.client.create({
-    data: {
-      name: "Anderson Family",
-      color: "#22c55e",
-      reviewCycleId: cycle.id,
-      currentMilestoneId: m2.id,
+      advisorId: userId,
+      reviewCycleId: cycle1.id,
+      currentMilestoneId: c1m1.id,
       cycleYear: 2026,
-      advisorId: userId,
+      name: "The Johnson Family",
+      color: "#6366f1",
     },
   });
-  for (const task of m2tasks) {
-    await prisma.clientTask.create({
-      data: { clientId: anderson.id, taskId: task.id, status: "pending" },
-    });
-  }
-  await prisma.clientTask.updateMany({
-    where: { clientId: anderson.id, taskId: { in: [m2tasks[0].id, m2tasks[1].id] } },
-    data: { status: "completed", completedAt: new Date() },
-  });
-
-  // David Wilson — Goals and Tax Prep, 2025 (lagging — amber year badge)
-  const wilson = await prisma.client.create({
-    data: {
-      name: "David Wilson",
-      color: "#f97316",
-      reviewCycleId: cycle.id,
-      currentMilestoneId: m1.id,
-      cycleYear: 2025,
-      advisorId: userId,
-    },
-  });
-  for (const task of m1tasks) {
-    await prisma.clientTask.create({
-      data: { clientId: wilson.id, taskId: task.id, status: "pending" },
-    });
+  for (const t of c1tasks) {
+    await prisma.clientTask.create({ data: { clientId: johnson.id, taskId: t.id, status: "pending" } });
   }
 
-  // Martinez Family — Year-End Planning, 2026, 0 tasks complete
+  // ── Cycle 2: Semi-Annual Review ────────────────────────────────────────────
+  const cycle2 = await prisma.reviewCycle.create({
+    data: { name: "Semi-Annual Review", advisorId: userId },
+  });
+
+  const c2m1 = await prisma.milestone.create({
+    data: { reviewCycleId: cycle2.id, title: "Spring Review Meeting", color: "#22c55e", order: 0, ...Q2 },
+  });
+  const c2m2 = await prisma.milestone.create({
+    data: { reviewCycleId: cycle2.id, title: "Fall Review Meeting", color: "#22c55e", order: 1, ...Q4 },
+  });
+  const c2ci1 = await prisma.checkIn.create({
+    data: { milestoneId: c2m1.id, title: c2m1.title, dayOfYear: Q2.dayOfYear },
+  });
+  const c2ci2 = await prisma.checkIn.create({
+    data: { milestoneId: c2m2.id, title: c2m2.title, dayOfYear: Q4.dayOfYear },
+  });
+  const c2m1tasks = await Promise.all([
+    "Send pre-meeting agenda",
+    "Review portfolio performance",
+    "Mid-year tax planning check",
+    "Hold spring meeting",
+    "Send follow-up summary",
+  ].map((title) => prisma.task.create({ data: { checkInId: c2ci1.id, title } })));
+  const c2m2tasks = await Promise.all([
+    "Send pre-meeting agenda",
+    "Review investment policy statement",
+    "Rebalance portfolio",
+    "Year-end tax planning",
+    "Hold fall meeting",
+    "Send follow-up summary",
+  ].map((title) => prisma.task.create({ data: { checkInId: c2ci2.id, title } })));
+
+  // Martinez Family → Q2 (currently active milestone)
   const martinez = await prisma.client.create({
     data: {
-      name: "Martinez Family",
-      color: "#8b5cf6",
-      reviewCycleId: cycle.id,
-      currentMilestoneId: m4.id,
-      cycleYear: 2026,
       advisorId: userId,
+      reviewCycleId: cycle2.id,
+      currentMilestoneId: c2m1.id,
+      cycleYear: 2026,
+      name: "The Martinez Family",
+      color: "#22c55e",
     },
   });
-  for (const task of m4tasks) {
-    await prisma.clientTask.create({
-      data: { clientId: martinez.id, taskId: task.id, status: "pending" },
-    });
+  for (const t of [...c2m1tasks, ...c2m2tasks]) {
+    await prisma.clientTask.create({ data: { clientId: martinez.id, taskId: t.id, status: "pending" } });
+  }
+
+  // ── Cycle 3: Tri-Annual Review ─────────────────────────────────────────────
+  const cycle3 = await prisma.reviewCycle.create({
+    data: { name: "Tri-Annual Review", advisorId: userId },
+  });
+
+  const c3m1 = await prisma.milestone.create({
+    data: { reviewCycleId: cycle3.id, title: "Winter Check-In", color: "#f97316", order: 0, ...Q1 },
+  });
+  const c3m2 = await prisma.milestone.create({
+    data: { reviewCycleId: cycle3.id, title: "Mid-Year Review", color: "#f97316", order: 1, ...Q2 },
+  });
+  const c3m3 = await prisma.milestone.create({
+    data: { reviewCycleId: cycle3.id, title: "Year-End Planning", color: "#f97316", order: 2, ...Q4 },
+  });
+  const c3ci1 = await prisma.checkIn.create({
+    data: { milestoneId: c3m1.id, title: c3m1.title, dayOfYear: Q1.dayOfYear },
+  });
+  const c3ci2 = await prisma.checkIn.create({
+    data: { milestoneId: c3m2.id, title: c3m2.title, dayOfYear: Q2.dayOfYear },
+  });
+  const c3ci3 = await prisma.checkIn.create({
+    data: { milestoneId: c3m3.id, title: c3m3.title, dayOfYear: Q4.dayOfYear },
+  });
+  const c3m1tasks = await Promise.all([
+    "Send check-in email",
+    "Review January tax documents",
+    "Confirm investment allocations",
+  ].map((title) => prisma.task.create({ data: { checkInId: c3ci1.id, title } })));
+  const c3m2tasks = await Promise.all([
+    "Send pre-meeting agenda",
+    "Mid-year tax planning check",
+    "Portfolio performance review",
+    "Hold mid-year meeting",
+    "Send follow-up summary",
+  ].map((title) => prisma.task.create({ data: { checkInId: c3ci2.id, title } })));
+  const c3m3tasks = await Promise.all([
+    "Review investment policy statement",
+    "Rebalance portfolio",
+    "Year-end tax moves",
+    "Hold year-end meeting",
+    "Send follow-up summary",
+  ].map((title) => prisma.task.create({ data: { checkInId: c3ci3.id, title } })));
+
+  // Anderson Family → Q2 (Q1 is past, Q2 is currently active)
+  const anderson = await prisma.client.create({
+    data: {
+      advisorId: userId,
+      reviewCycleId: cycle3.id,
+      currentMilestoneId: c3m2.id,
+      cycleYear: 2026,
+      name: "The Anderson Family",
+      color: "#f97316",
+    },
+  });
+  for (const t of [...c3m1tasks, ...c3m2tasks, ...c3m3tasks]) {
+    await prisma.clientTask.create({ data: { clientId: anderson.id, taskId: t.id, status: "pending" } });
+  }
+
+  // ── Cycle 4: Quarterly Review ──────────────────────────────────────────────
+  const cycle4 = await prisma.reviewCycle.create({
+    data: { name: "Quarterly Review", advisorId: userId },
+  });
+
+  const c4m1 = await prisma.milestone.create({
+    data: { reviewCycleId: cycle4.id, title: "Q1 Review Meeting", color: "#8b5cf6", order: 0, ...Q1 },
+  });
+  const c4m2 = await prisma.milestone.create({
+    data: { reviewCycleId: cycle4.id, title: "Q2 Review Meeting", color: "#8b5cf6", order: 1, ...Q2 },
+  });
+  const c4m3 = await prisma.milestone.create({
+    data: { reviewCycleId: cycle4.id, title: "Q3 Review Meeting", color: "#8b5cf6", order: 2, ...Q3 },
+  });
+  const c4m4 = await prisma.milestone.create({
+    data: { reviewCycleId: cycle4.id, title: "Q4 Review Meeting", color: "#8b5cf6", order: 3, ...Q4 },
+  });
+  const c4ci1 = await prisma.checkIn.create({
+    data: { milestoneId: c4m1.id, title: c4m1.title, dayOfYear: Q1.dayOfYear },
+  });
+  const c4ci2 = await prisma.checkIn.create({
+    data: { milestoneId: c4m2.id, title: c4m2.title, dayOfYear: Q2.dayOfYear },
+  });
+  const c4ci3 = await prisma.checkIn.create({
+    data: { milestoneId: c4m3.id, title: c4m3.title, dayOfYear: Q3.dayOfYear },
+  });
+  const c4ci4 = await prisma.checkIn.create({
+    data: { milestoneId: c4m4.id, title: c4m4.title, dayOfYear: Q4.dayOfYear },
+  });
+  const c4m1tasks = await Promise.all([
+    "Send pre-meeting agenda",
+    "Review portfolio performance",
+    "Quarterly tax check",
+    "Hold Q1 meeting",
+    "Send follow-up summary",
+  ].map((title) => prisma.task.create({ data: { checkInId: c4ci1.id, title } })));
+  const c4m2tasks = await Promise.all([
+    "Send pre-meeting agenda",
+    "Review portfolio performance",
+    "Quarterly tax check",
+    "Hold Q2 meeting",
+    "Send follow-up summary",
+  ].map((title) => prisma.task.create({ data: { checkInId: c4ci2.id, title } })));
+  const c4m3tasks = await Promise.all([
+    "Send pre-meeting agenda",
+    "Review portfolio performance",
+    "Quarterly tax check",
+    "Hold Q3 meeting",
+    "Send follow-up summary",
+  ].map((title) => prisma.task.create({ data: { checkInId: c4ci3.id, title } })));
+  const c4m4tasks = await Promise.all([
+    "Send pre-meeting agenda",
+    "Review investment policy statement",
+    "Rebalance portfolio",
+    "Year-end tax planning",
+    "Hold Q4 meeting",
+    "Send follow-up summary",
+  ].map((title) => prisma.task.create({ data: { checkInId: c4ci4.id, title } })));
+
+  // Williams Family → Q2 (Q1 is past, Q2 is currently active)
+  const williams = await prisma.client.create({
+    data: {
+      advisorId: userId,
+      reviewCycleId: cycle4.id,
+      currentMilestoneId: c4m2.id,
+      cycleYear: 2026,
+      name: "The Williams Family",
+      color: "#8b5cf6",
+    },
+  });
+  for (const t of [...c4m1tasks, ...c4m2tasks, ...c4m3tasks, ...c4m4tasks]) {
+    await prisma.clientTask.create({ data: { clientId: williams.id, taskId: t.id, status: "pending" } });
   }
 
   // Mark user as onboarded

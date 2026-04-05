@@ -95,7 +95,7 @@ export function ClientTag({
         </button>
         {yearDropdownOpen && (
           <div className="absolute left-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg dark:shadow-black/40 z-50 py-1 min-w-[80px]">
-            {[yr, yr + 1].map((y) => (
+            {[yr - 1, yr, yr + 1].map((y) => (
               <button
                 key={y}
                 onClick={() => handleYearSelect(y)}
