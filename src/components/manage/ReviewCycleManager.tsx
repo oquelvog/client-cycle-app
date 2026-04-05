@@ -8,6 +8,7 @@ import {
 } from "@/actions/review-cycles";
 import {
   createMilestone,
+  updateMilestone,
   deleteMilestone,
   createCheckIn,
   deleteCheckIn,
@@ -26,7 +27,7 @@ interface Props {
 }
 
 const DURATION_LABELS: Record<DurationType, string> = {
-  specific_date: "Specific Date",
+  specific_date: "Specific Date(s)",
   month: "Month",
   quarter: "Quarter",
 };
@@ -39,10 +40,10 @@ const COLORS = [
 // ── Date conversion helpers ───────────────────────────────────────────────────
 
 const QUARTER_RANGES: Record<string, { start: number; end: number; label: string }> = {
-  Q1: { start: 1,   end: 90,  label: "Q1 — Jan–Mar" },
-  Q2: { start: 91,  end: 181, label: "Q2 — Apr–Jun" },
-  Q3: { start: 182, end: 273, label: "Q3 — Jul–Sep" },
-  Q4: { start: 274, end: 365, label: "Q4 — Oct–Dec" },
+  Q1: { start: 1,   end: 90,  label: "Q1: Jan – Mar" },
+  Q2: { start: 91,  end: 181, label: "Q2: Apr – Jun" },
+  Q3: { start: 182, end: 273, label: "Q3: Jul – Sep" },
+  Q4: { start: 274, end: 365, label: "Q4: Oct – Dec" },
 };
 
 const MONTH_RANGES = [
@@ -62,36 +63,69 @@ const MONTH_RANGES = [
 
 function dateStringToDayOfYear(dateStr: string): number {
   if (!dateStr) return 1;
-  // dateStr is "YYYY-MM-DD"; parse as local date to avoid UTC offset shifts
   const [, mm, dd] = dateStr.split("-").map(Number);
-  // Use a non-leap reference year for consistent day numbers
   const ref = new Date(2025, mm - 1, dd);
   const start = new Date(2025, 0, 0);
   return Math.floor((ref.getTime() - start.getTime()) / 86_400_000);
 }
 
+/** Convert a dayOfYear back to a YYYY-MM-DD string (uses 2025 as ref year). */
+function dayOfYearToDateString(day: number): string {
+  const ref = new Date(2025, 0, day);
+  const mm = String(ref.getMonth() + 1).padStart(2, "0");
+  const dd = String(ref.getDate()).padStart(2, "0");
+  return `2025-${mm}-${dd}`;
+}
+
+/** Derive initial form state from an existing milestone for the edit path. */
+function initialStateFromMilestone(milestone: Milestone) {
+  const { durationType, dayOfYear, endDayOfYear } = milestone;
+
+  if (durationType === "quarter") {
+    const key = Object.keys(QUARTER_RANGES).find(
+      (k) => QUARTER_RANGES[k].start === dayOfYear
+    ) ?? "Q1";
+    return { duration: "quarter" as DurationType, selectedQuarter: key, selectedMonth: 0, startDate: "", endDate: "" };
+  }
+
+  if (durationType === "month") {
+    const idx = MONTH_RANGES.findIndex((m) => m.start === dayOfYear);
+    return { duration: "month" as DurationType, selectedQuarter: "Q1", selectedMonth: idx >= 0 ? idx : 0, startDate: "", endDate: "" };
+  }
+
+  // specific_date
+  return {
+    duration: "specific_date" as DurationType,
+    selectedQuarter: "Q1",
+    selectedMonth: 0,
+    startDate: dayOfYearToDateString(dayOfYear),
+    endDate: endDayOfYear !== dayOfYear ? dayOfYearToDateString(endDayOfYear) : "",
+  };
+}
+
 // ── MilestoneForm sub-component ───────────────────────────────────────────────
 
 interface MilestoneFormProps {
-  cycleId: string;
+  /** Provide cycleId for create mode; provide milestone for edit mode. */
+  cycleId?: string;
+  milestone?: Milestone;
   onSaved: () => void;
   onCancel: () => void;
 }
 
-function MilestoneForm({ cycleId, onSaved, onCancel }: MilestoneFormProps) {
-  const [title, setTitle] = useState("");
-  const [duration, setDuration] = useState<DurationType>("month");
-  const [color, setColor] = useState(COLORS[0]);
+function MilestoneForm({ cycleId, milestone, onSaved, onCancel }: MilestoneFormProps) {
+  const isEdit = !!milestone;
 
-  // Quarter selection
-  const [selectedQuarter, setSelectedQuarter] = useState<string>("Q1");
+  const init = milestone ? initialStateFromMilestone(milestone) : null;
 
-  // Month selection
-  const [selectedMonth, setSelectedMonth] = useState<number>(0); // index into MONTH_RANGES
+  const [title, setTitle] = useState(milestone?.title ?? "");
+  const [duration, setDuration] = useState<DurationType>(init?.duration ?? "month");
+  const [color, setColor] = useState(milestone?.color ?? COLORS[0]);
 
-  // Specific date
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [selectedQuarter, setSelectedQuarter] = useState<string>(init?.selectedQuarter ?? "Q1");
+  const [selectedMonth, setSelectedMonth] = useState<number>(init?.selectedMonth ?? 0);
+  const [startDate, setStartDate] = useState(init?.startDate ?? "");
+  const [endDate, setEndDate] = useState(init?.endDate ?? "");
 
   const [saving, setSaving] = useState(false);
 
@@ -104,7 +138,6 @@ function MilestoneForm({ cycleId, onSaved, onCancel }: MilestoneFormProps) {
       const m = MONTH_RANGES[selectedMonth];
       return { dayOfYear: m.start, endDayOfYear: m.end };
     }
-    // specific_date
     const start = dateStringToDayOfYear(startDate);
     const end = endDate ? dateStringToDayOfYear(endDate) : start;
     return { dayOfYear: start, endDayOfYear: end };
@@ -121,14 +154,24 @@ function MilestoneForm({ cycleId, onSaved, onCancel }: MilestoneFormProps) {
     setSaving(true);
     try {
       const { dayOfYear, endDayOfYear } = getDayRange();
-      await createMilestone({
-        reviewCycleId: cycleId,
-        title: title.trim(),
-        dayOfYear,
-        endDayOfYear,
-        durationType: duration,
-        color,
-      });
+      if (isEdit && milestone) {
+        await updateMilestone(milestone.id, {
+          title: title.trim(),
+          dayOfYear,
+          endDayOfYear,
+          durationType: duration,
+          color,
+        });
+      } else {
+        await createMilestone({
+          reviewCycleId: cycleId!,
+          title: title.trim(),
+          dayOfYear,
+          endDayOfYear,
+          durationType: duration,
+          color,
+        });
+      }
       onSaved();
     } finally {
       setSaving(false);
@@ -256,7 +299,7 @@ function MilestoneForm({ cycleId, onSaved, onCancel }: MilestoneFormProps) {
 
       <div className="flex gap-2 pt-1">
         <Button size="sm" onClick={handleSave} disabled={!isValid() || saving}>
-          {saving ? "Adding…" : "Add milestone"}
+          {saving ? (isEdit ? "Saving…" : "Adding…") : (isEdit ? "Save changes" : "Add milestone")}
         </Button>
         <Button size="sm" variant="ghost" onClick={onCancel}>Cancel</Button>
       </div>
@@ -271,6 +314,7 @@ export function ReviewCycleManager({ reviewCycles, onChanged }: Props) {
   const [addingCycle, setAddingCycle] = useState(false);
   const [expandedCycle, setExpandedCycle] = useState<string | null>(null);
   const [addingMilestone, setAddingMilestone] = useState<string | null>(null);
+  const [editingMilestone, setEditingMilestone] = useState<string | null>(null);
   const [addingCheckIn, setAddingCheckIn] = useState<string | null>(null);
   const [addingTask, setAddingTask] = useState<string | null>(null);
 
@@ -345,85 +389,109 @@ export function ReviewCycleManager({ reviewCycles, onChanged }: Props) {
               {/* Milestones */}
               {cycle.milestones.map((milestone) => (
                 <div key={milestone.id} className="border border-gray-100 rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: milestone.color }} />
-                    <span className="text-sm font-medium flex-1">{milestone.title}</span>
-                    <span className="text-xs text-gray-400">{DURATION_LABELS[milestone.durationType]}</span>
-                    <button
-                      onClick={() => deleteMilestone(milestone.id).then(onChanged)}
-                      className="text-gray-300 hover:text-red-400 text-xs"
-                    >✕</button>
-                  </div>
+                  {editingMilestone === milestone.id ? (
+                    <MilestoneForm
+                      milestone={milestone}
+                      onSaved={() => { setEditingMilestone(null); onChanged(); }}
+                      onCancel={() => setEditingMilestone(null)}
+                    />
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: milestone.color }} />
+                        <span className="text-sm font-medium flex-1">{milestone.title}</span>
+                        <span className="text-xs text-gray-400">{DURATION_LABELS[milestone.durationType]}</span>
+                        {/* Edit button */}
+                        <button
+                          onClick={() => {
+                            setAddingMilestone(null);
+                            setEditingMilestone(milestone.id);
+                          }}
+                          className="text-gray-300 hover:text-indigo-500 transition-colors"
+                          title="Edit milestone"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                              d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828A2 2 0 0110 16.414H8v-2a2 2 0 01.586-1.414z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => deleteMilestone(milestone.id).then(onChanged)}
+                          className="text-gray-300 hover:text-red-400 text-xs"
+                        >✕</button>
+                      </div>
 
-                  <div className="pl-4 space-y-2">
-                    {milestone.checkIns.map((ci) => (
-                      <div key={ci.id} className="border-l-2 border-gray-100 pl-3">
-                        <div className="flex items-center gap-1 mb-1">
-                          <span className="text-xs font-medium text-gray-600">{ci.title}</span>
-                          <button
-                            onClick={() => deleteCheckIn(ci.id).then(onChanged)}
-                            className="ml-auto text-gray-300 hover:text-red-400 text-[10px]"
-                          >✕</button>
-                        </div>
-                        <div className="space-y-0.5">
-                          {ci.tasks.map((task) => (
-                            <div key={task.id} className="flex items-center gap-1 text-xs text-gray-500">
-                              <span className="w-1 h-1 rounded-full bg-gray-300" />
-                              <span className="flex-1">{task.title}</span>
+                      <div className="pl-4 space-y-2">
+                        {milestone.checkIns.map((ci) => (
+                          <div key={ci.id} className="border-l-2 border-gray-100 pl-3">
+                            <div className="flex items-center gap-1 mb-1">
+                              <span className="text-xs font-medium text-gray-600">{ci.title}</span>
                               <button
-                                onClick={() => deleteTask(task.id).then(onChanged)}
-                                className="text-gray-300 hover:text-red-400"
+                                onClick={() => deleteCheckIn(ci.id).then(onChanged)}
+                                className="ml-auto text-gray-300 hover:text-red-400 text-[10px]"
                               >✕</button>
                             </div>
-                          ))}
-                        </div>
-                        {addingTask === ci.id ? (
-                          <div className="flex gap-1 mt-1">
+                            <div className="space-y-0.5">
+                              {ci.tasks.map((task) => (
+                                <div key={task.id} className="flex items-center gap-1 text-xs text-gray-500">
+                                  <span className="w-1 h-1 rounded-full bg-gray-300" />
+                                  <span className="flex-1">{task.title}</span>
+                                  <button
+                                    onClick={() => deleteTask(task.id).then(onChanged)}
+                                    className="text-gray-300 hover:text-red-400"
+                                  >✕</button>
+                                </div>
+                              ))}
+                            </div>
+                            {addingTask === ci.id ? (
+                              <div className="flex gap-1 mt-1">
+                                <input
+                                  value={tTitle}
+                                  onChange={(e) => setTTitle(e.target.value)}
+                                  placeholder="Task title…"
+                                  autoFocus
+                                  className="flex-1 text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none"
+                                />
+                                <Button size="sm" onClick={() => handleAddTask(ci.id)} disabled={!tTitle.trim()}>Add</Button>
+                                <Button size="sm" variant="ghost" onClick={() => setAddingTask(null)}>✕</Button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => { setAddingTask(ci.id); setTTitle(""); }}
+                                className="text-[10px] text-indigo-500 hover:text-indigo-600 mt-1"
+                              >+ task</button>
+                            )}
+                          </div>
+                        ))}
+
+                        {/* Add check-in */}
+                        {addingCheckIn === milestone.id ? (
+                          <div className="space-y-1 mt-2">
                             <input
-                              value={tTitle}
-                              onChange={(e) => setTTitle(e.target.value)}
-                              placeholder="Task title…"
+                              value={ciTitle}
+                              onChange={(e) => setCiTitle(e.target.value)}
+                              placeholder="Check-in title…"
                               autoFocus
-                              className="flex-1 text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none"
+                              className="w-full text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none"
                             />
-                            <Button size="sm" onClick={() => handleAddTask(ci.id)} disabled={!tTitle.trim()}>Add</Button>
-                            <Button size="sm" variant="ghost" onClick={() => setAddingTask(null)}>✕</Button>
+                            <div className="flex gap-1">
+                              <Button
+                                size="sm"
+                                onClick={() => handleAddCheckIn(milestone.id, milestone.dayOfYear)}
+                                disabled={!ciTitle.trim()}
+                              >Add</Button>
+                              <Button size="sm" variant="ghost" onClick={() => setAddingCheckIn(null)}>Cancel</Button>
+                            </div>
                           </div>
                         ) : (
                           <button
-                            onClick={() => { setAddingTask(ci.id); setTTitle(""); }}
-                            className="text-[10px] text-indigo-500 hover:text-indigo-600 mt-1"
-                          >+ task</button>
+                            onClick={() => { setAddingCheckIn(milestone.id); setCiTitle(""); }}
+                            className="text-xs text-indigo-500 hover:text-indigo-600 mt-1"
+                          >+ add check-in</button>
                         )}
                       </div>
-                    ))}
-
-                    {/* Add check-in */}
-                    {addingCheckIn === milestone.id ? (
-                      <div className="space-y-1 mt-2">
-                        <input
-                          value={ciTitle}
-                          onChange={(e) => setCiTitle(e.target.value)}
-                          placeholder="Check-in title…"
-                          autoFocus
-                          className="w-full text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none"
-                        />
-                        <div className="flex gap-1">
-                          <Button
-                            size="sm"
-                            onClick={() => handleAddCheckIn(milestone.id, milestone.dayOfYear)}
-                            disabled={!ciTitle.trim()}
-                          >Add</Button>
-                          <Button size="sm" variant="ghost" onClick={() => setAddingCheckIn(null)}>Cancel</Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => { setAddingCheckIn(milestone.id); setCiTitle(""); }}
-                        className="text-xs text-indigo-500 hover:text-indigo-600 mt-1"
-                      >+ add check-in</button>
-                    )}
-                  </div>
+                    </>
+                  )}
                 </div>
               ))}
 
@@ -435,7 +503,11 @@ export function ReviewCycleManager({ reviewCycles, onChanged }: Props) {
                   onCancel={() => setAddingMilestone(null)}
                 />
               ) : (
-                <Button size="sm" variant="secondary" onClick={() => setAddingMilestone(cycle.id)}>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => { setEditingMilestone(null); setAddingMilestone(cycle.id); }}
+                >
                   + Add milestone
                 </Button>
               )}
