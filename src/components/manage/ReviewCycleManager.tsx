@@ -69,7 +69,6 @@ function dateStringToDayOfYear(dateStr: string): number {
   return Math.floor((ref.getTime() - start.getTime()) / 86_400_000);
 }
 
-/** Convert a dayOfYear back to a YYYY-MM-DD string (uses 2025 as ref year). */
 function dayOfYearToDateString(day: number): string {
   const ref = new Date(2025, 0, day);
   const mm = String(ref.getMonth() + 1).padStart(2, "0");
@@ -77,23 +76,18 @@ function dayOfYearToDateString(day: number): string {
   return `2025-${mm}-${dd}`;
 }
 
-/** Derive initial form state from an existing milestone for the edit path. */
 function initialStateFromMilestone(milestone: Milestone) {
   const { durationType, dayOfYear, endDayOfYear } = milestone;
-
   if (durationType === "quarter") {
     const key = Object.keys(QUARTER_RANGES).find(
       (k) => QUARTER_RANGES[k].start === dayOfYear
     ) ?? "Q1";
     return { duration: "quarter" as DurationType, selectedQuarter: key, selectedMonth: 0, startDate: "", endDate: "" };
   }
-
   if (durationType === "month") {
     const idx = MONTH_RANGES.findIndex((m) => m.start === dayOfYear);
     return { duration: "month" as DurationType, selectedQuarter: "Q1", selectedMonth: idx >= 0 ? idx : 0, startDate: "", endDate: "" };
   }
-
-  // specific_date
   return {
     duration: "specific_date" as DurationType,
     selectedQuarter: "Q1",
@@ -106,7 +100,6 @@ function initialStateFromMilestone(milestone: Milestone) {
 // ── MilestoneForm sub-component ───────────────────────────────────────────────
 
 interface MilestoneFormProps {
-  /** Provide cycleId for create mode; provide milestone for edit mode. */
   cycleId?: string;
   milestone?: Milestone;
   onSaved: () => void;
@@ -115,18 +108,15 @@ interface MilestoneFormProps {
 
 function MilestoneForm({ cycleId, milestone, onSaved, onCancel }: MilestoneFormProps) {
   const isEdit = !!milestone;
-
   const init = milestone ? initialStateFromMilestone(milestone) : null;
 
   const [title, setTitle] = useState(milestone?.title ?? "");
   const [duration, setDuration] = useState<DurationType>(init?.duration ?? "month");
   const [color, setColor] = useState(milestone?.color ?? COLORS[0]);
-
   const [selectedQuarter, setSelectedQuarter] = useState<string>(init?.selectedQuarter ?? "Q1");
   const [selectedMonth, setSelectedMonth] = useState<number>(init?.selectedMonth ?? 0);
   const [startDate, setStartDate] = useState(init?.startDate ?? "");
   const [endDate, setEndDate] = useState(init?.endDate ?? "");
-
   const [saving, setSaving] = useState(false);
 
   function getDayRange(): { dayOfYear: number; endDayOfYear: number } {
@@ -155,22 +145,9 @@ function MilestoneForm({ cycleId, milestone, onSaved, onCancel }: MilestoneFormP
     try {
       const { dayOfYear, endDayOfYear } = getDayRange();
       if (isEdit && milestone) {
-        await updateMilestone(milestone.id, {
-          title: title.trim(),
-          dayOfYear,
-          endDayOfYear,
-          durationType: duration,
-          color,
-        });
+        await updateMilestone(milestone.id, { title: title.trim(), dayOfYear, endDayOfYear, durationType: duration, color });
       } else {
-        await createMilestone({
-          reviewCycleId: cycleId!,
-          title: title.trim(),
-          dayOfYear,
-          endDayOfYear,
-          durationType: duration,
-          color,
-        });
+        await createMilestone({ reviewCycleId: cycleId!, title: title.trim(), dayOfYear, endDayOfYear, durationType: duration, color });
       }
       onSaved();
     } finally {
@@ -178,20 +155,23 @@ function MilestoneForm({ cycleId, milestone, onSaved, onCancel }: MilestoneFormP
     }
   }
 
+  const inputCls = "w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400";
+  const labelCls = "text-[10px] text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide";
+
   return (
-    <div className="border border-dashed border-indigo-200 rounded-lg p-3 space-y-3 bg-indigo-50/30">
+    <div className="border border-dashed border-indigo-200 dark:border-indigo-800 rounded-lg p-3 space-y-3 bg-indigo-50/30 dark:bg-indigo-950/20">
       {/* 1. Milestone name */}
       <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Milestone name…"
         autoFocus
-        className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
+        className={inputCls}
       />
 
       {/* 2. Interval type */}
       <div>
-        <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wide mb-1.5">Interval type</p>
+        <p className={`${labelCls} mb-1.5`}>Interval type</p>
         <div className="flex gap-1.5">
           {(["specific_date", "month", "quarter"] as DurationType[]).map((d) => (
             <button
@@ -201,7 +181,7 @@ function MilestoneForm({ cycleId, milestone, onSaved, onCancel }: MilestoneFormP
               className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
                 duration === d
                   ? "bg-indigo-600 border-indigo-600 text-white"
-                  : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
+                  : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"
               }`}
             >
               {DURATION_LABELS[d]}
@@ -213,7 +193,7 @@ function MilestoneForm({ cycleId, milestone, onSaved, onCancel }: MilestoneFormP
       {/* 3. Date inputs — conditional on type */}
       {duration === "quarter" && (
         <div>
-          <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wide mb-1.5">Quarter</p>
+          <p className={`${labelCls} mb-1.5`}>Quarter</p>
           <div className="grid grid-cols-2 gap-1.5">
             {Object.entries(QUARTER_RANGES).map(([key, val]) => (
               <button
@@ -222,8 +202,8 @@ function MilestoneForm({ cycleId, milestone, onSaved, onCancel }: MilestoneFormP
                 onClick={() => setSelectedQuarter(key)}
                 className={`px-3 py-2 rounded-lg text-xs font-medium border text-left transition-colors ${
                   selectedQuarter === key
-                    ? "bg-indigo-50 border-indigo-400 text-indigo-700"
-                    : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
+                    ? "bg-indigo-50 dark:bg-indigo-950/50 border-indigo-400 text-indigo-700 dark:text-indigo-300"
+                    : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"
                 }`}
               >
                 {val.label}
@@ -235,7 +215,7 @@ function MilestoneForm({ cycleId, milestone, onSaved, onCancel }: MilestoneFormP
 
       {duration === "month" && (
         <div>
-          <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wide mb-1.5">Month</p>
+          <p className={`${labelCls} mb-1.5`}>Month</p>
           <div className="grid grid-cols-3 gap-1">
             {MONTH_RANGES.map((m, i) => (
               <button
@@ -244,8 +224,8 @@ function MilestoneForm({ cycleId, milestone, onSaved, onCancel }: MilestoneFormP
                 onClick={() => setSelectedMonth(i)}
                 className={`px-2 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
                   selectedMonth === i
-                    ? "bg-indigo-50 border-indigo-400 text-indigo-700"
-                    : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
+                    ? "bg-indigo-50 dark:bg-indigo-950/50 border-indigo-400 text-indigo-700 dark:text-indigo-300"
+                    : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"
                 }`}
               >
                 {m.label.slice(0, 3)}
@@ -258,32 +238,21 @@ function MilestoneForm({ cycleId, milestone, onSaved, onCancel }: MilestoneFormP
       {duration === "specific_date" && (
         <div className="space-y-2">
           <div>
-            <label className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">Start date</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="mt-1 w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
-            />
+            <label className={labelCls}>Start date</label>
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={`mt-1 ${inputCls}`} />
           </div>
           <div>
-            <label className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">
-              End date <span className="normal-case font-normal text-gray-400">(optional — leave blank for single day)</span>
+            <label className={labelCls}>
+              End date <span className="normal-case font-normal text-gray-400 dark:text-gray-500">(optional — leave blank for single day)</span>
             </label>
-            <input
-              type="date"
-              value={endDate}
-              min={startDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="mt-1 w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
-            />
+            <input type="date" value={endDate} min={startDate} onChange={(e) => setEndDate(e.target.value)} className={`mt-1 ${inputCls}`} />
           </div>
         </div>
       )}
 
       {/* Color picker */}
       <div>
-        <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wide mb-1.5">Color</p>
+        <p className={`${labelCls} mb-1.5`}>Color</p>
         <div className="flex gap-1.5 flex-wrap">
           {COLORS.map((c) => (
             <button
@@ -356,7 +325,7 @@ export function ReviewCycleManager({ reviewCycles, onChanged }: Props) {
           onChange={(e) => setNewCycleName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleAddCycle()}
           placeholder="New review cycle name…"
-          className="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
+          className="flex-1 text-sm border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
         />
         <Button onClick={handleAddCycle} disabled={addingCycle || !newCycleName.trim()}>
           Add cycle
@@ -365,18 +334,18 @@ export function ReviewCycleManager({ reviewCycles, onChanged }: Props) {
 
       {/* Cycle list */}
       {reviewCycles.map((cycle) => (
-        <div key={cycle.id} className="border border-gray-200 rounded-xl overflow-hidden">
+        <div key={cycle.id} className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
           <div
-            className="flex items-center justify-between px-4 py-3 bg-gray-50 cursor-pointer"
+            className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800/60 cursor-pointer"
             onClick={() => setExpandedCycle(expandedCycle === cycle.id ? null : cycle.id)}
           >
-            <span className="font-medium text-sm text-gray-800">{cycle.name}</span>
+            <span className="font-medium text-sm text-gray-800 dark:text-gray-200">{cycle.name}</span>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-gray-400 dark:text-gray-500">
                 {cycle.milestones.length} milestone{cycle.milestones.length !== 1 ? "s" : ""}
               </span>
               <svg
-                className={`w-4 h-4 text-gray-400 transition-transform ${expandedCycle === cycle.id ? "rotate-180" : ""}`}
+                className={`w-4 h-4 text-gray-400 dark:text-gray-500 transition-transform ${expandedCycle === cycle.id ? "rotate-180" : ""}`}
                 fill="none" viewBox="0 0 24 24" stroke="currentColor"
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -388,7 +357,7 @@ export function ReviewCycleManager({ reviewCycles, onChanged }: Props) {
             <div className="p-4 space-y-3">
               {/* Milestones */}
               {cycle.milestones.map((milestone) => (
-                <div key={milestone.id} className="border border-gray-100 rounded-lg p-3">
+                <div key={milestone.id} className="border border-gray-100 dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-800/30">
                   {editingMilestone === milestone.id ? (
                     <MilestoneForm
                       milestone={milestone}
@@ -399,15 +368,11 @@ export function ReviewCycleManager({ reviewCycles, onChanged }: Props) {
                     <>
                       <div className="flex items-center gap-2 mb-2">
                         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: milestone.color }} />
-                        <span className="text-sm font-medium flex-1">{milestone.title}</span>
-                        <span className="text-xs text-gray-400">{DURATION_LABELS[milestone.durationType]}</span>
-                        {/* Edit button */}
+                        {/* Title + inline edit button */}
+                        <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{milestone.title}</span>
                         <button
-                          onClick={() => {
-                            setAddingMilestone(null);
-                            setEditingMilestone(milestone.id);
-                          }}
-                          className="text-gray-300 hover:text-indigo-500 transition-colors"
+                          onClick={() => { setAddingMilestone(null); setEditingMilestone(milestone.id); }}
+                          className="text-gray-300 dark:text-gray-600 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
                           title="Edit milestone"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -415,30 +380,33 @@ export function ReviewCycleManager({ reviewCycles, onChanged }: Props) {
                               d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828A2 2 0 0110 16.414H8v-2a2 2 0 01.586-1.414z" />
                           </svg>
                         </button>
+                        {/* Spacer pushes duration + delete to right */}
+                        <span className="flex-1" />
+                        <span className="text-xs text-gray-400 dark:text-gray-500">{DURATION_LABELS[milestone.durationType]}</span>
                         <button
                           onClick={() => deleteMilestone(milestone.id).then(onChanged)}
-                          className="text-gray-300 hover:text-red-400 text-xs"
+                          className="text-gray-300 dark:text-gray-600 hover:text-red-400 dark:hover:text-red-400 text-xs"
                         >✕</button>
                       </div>
 
                       <div className="pl-4 space-y-2">
                         {milestone.checkIns.map((ci) => (
-                          <div key={ci.id} className="border-l-2 border-gray-100 pl-3">
+                          <div key={ci.id} className="border-l-2 border-gray-100 dark:border-gray-700 pl-3">
                             <div className="flex items-center gap-1 mb-1">
-                              <span className="text-xs font-medium text-gray-600">{ci.title}</span>
+                              <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{ci.title}</span>
                               <button
                                 onClick={() => deleteCheckIn(ci.id).then(onChanged)}
-                                className="ml-auto text-gray-300 hover:text-red-400 text-[10px]"
+                                className="ml-auto text-gray-300 dark:text-gray-600 hover:text-red-400 text-[10px]"
                               >✕</button>
                             </div>
                             <div className="space-y-0.5">
                               {ci.tasks.map((task) => (
-                                <div key={task.id} className="flex items-center gap-1 text-xs text-gray-500">
-                                  <span className="w-1 h-1 rounded-full bg-gray-300" />
+                                <div key={task.id} className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                                  <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
                                   <span className="flex-1">{task.title}</span>
                                   <button
                                     onClick={() => deleteTask(task.id).then(onChanged)}
-                                    className="text-gray-300 hover:text-red-400"
+                                    className="text-gray-300 dark:text-gray-600 hover:text-red-400"
                                   >✕</button>
                                 </div>
                               ))}
@@ -450,7 +418,7 @@ export function ReviewCycleManager({ reviewCycles, onChanged }: Props) {
                                   onChange={(e) => setTTitle(e.target.value)}
                                   placeholder="Task title…"
                                   autoFocus
-                                  className="flex-1 text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none"
+                                  className="flex-1 text-xs border border-gray-200 dark:border-gray-700 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none"
                                 />
                                 <Button size="sm" onClick={() => handleAddTask(ci.id)} disabled={!tTitle.trim()}>Add</Button>
                                 <Button size="sm" variant="ghost" onClick={() => setAddingTask(null)}>✕</Button>
@@ -458,7 +426,7 @@ export function ReviewCycleManager({ reviewCycles, onChanged }: Props) {
                             ) : (
                               <button
                                 onClick={() => { setAddingTask(ci.id); setTTitle(""); }}
-                                className="text-[10px] text-indigo-500 hover:text-indigo-600 mt-1"
+                                className="text-[10px] text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 mt-1"
                               >+ task</button>
                             )}
                           </div>
@@ -472,7 +440,7 @@ export function ReviewCycleManager({ reviewCycles, onChanged }: Props) {
                               onChange={(e) => setCiTitle(e.target.value)}
                               placeholder="Check-in title…"
                               autoFocus
-                              className="w-full text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none"
+                              className="w-full text-xs border border-gray-200 dark:border-gray-700 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none"
                             />
                             <div className="flex gap-1">
                               <Button
@@ -486,7 +454,7 @@ export function ReviewCycleManager({ reviewCycles, onChanged }: Props) {
                         ) : (
                           <button
                             onClick={() => { setAddingCheckIn(milestone.id); setCiTitle(""); }}
-                            className="text-xs text-indigo-500 hover:text-indigo-600 mt-1"
+                            className="text-xs text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 mt-1"
                           >+ add check-in</button>
                         )}
                       </div>
@@ -514,7 +482,7 @@ export function ReviewCycleManager({ reviewCycles, onChanged }: Props) {
 
               <button
                 onClick={() => deleteReviewCycle(cycle.id).then(onChanged)}
-                className="text-xs text-red-400 hover:text-red-600"
+                className="text-xs text-red-400 hover:text-red-600 dark:hover:text-red-300"
               >
                 Delete this review cycle
               </button>

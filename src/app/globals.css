@@ -27,3 +27,11 @@ html, body {
 ::-webkit-scrollbar-thumb:hover {
   background: #d1d5db;
 }
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #374151;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #4b5563;
+}

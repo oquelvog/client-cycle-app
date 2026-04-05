@@ -20,9 +20,9 @@ export function Button({
         size === "sm" && "px-2.5 py-1 text-xs",
         size === "md" && "px-3.5 py-2 text-sm",
         variant === "primary" && "bg-indigo-600 text-white hover:bg-indigo-700 focus-visible:ring-indigo-500",
-        variant === "secondary" && "bg-gray-100 text-gray-700 hover:bg-gray-200 focus-visible:ring-gray-400",
+        variant === "secondary" && "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 focus-visible:ring-gray-400",
         variant === "danger" && "bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500",
-        variant === "ghost" && "text-gray-600 hover:bg-gray-100 focus-visible:ring-gray-400",
+        variant === "ghost" && "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 focus-visible:ring-gray-400",
         className
       )}
       {...props}
