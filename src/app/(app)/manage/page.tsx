@@ -1,0 +1,115 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { ReviewCycle, Client, Milestone, CheckIn, Task } from "@/types";
+import { getReviewCycles } from "@/actions/review-cycles";
+import { getClients } from "@/actions/clients";
+import { ReviewCycleManager } from "@/components/manage/ReviewCycleManager";
+import { ClientList } from "@/components/manage/ClientList";
+import { AddClientForm } from "@/components/manage/AddClientForm";
+import { BulkImport } from "@/components/manage/BulkImport";
+
+type FullReviewCycle = ReviewCycle & {
+  milestones: (Milestone & { checkIns: (CheckIn & { tasks: Task[] })[] })[];
+};
+
+type FullClient = Client & {
+  reviewCycle: ReviewCycle;
+  currentMilestone: Milestone | null;
+};
+
+type Tab = "households" | "cycles" | "import";
+
+export default function ManagePage() {
+  const [tab, setTab] = useState<Tab>("households");
+  const [reviewCycles, setReviewCycles] = useState<FullReviewCycle[]>([]);
+  const [clients, setClients] = useState<FullClient[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [addingClient, setAddingClient] = useState(false);
+
+  const load = useCallback(async () => {
+    const [cycles, cls] = await Promise.all([getReviewCycles(), getClients()]);
+    setReviewCycles(cycles as FullReviewCycle[]);
+    setClients(cls as FullClient[]);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center text-sm text-gray-400">
+        Loading…
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full overflow-y-auto">
+      <div className="max-w-3xl mx-auto px-6 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-xl font-bold text-gray-900">Manage</h1>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 mb-6 border-b border-gray-200">
+          {(["households", "cycles", "import"] as Tab[]).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`px-4 py-2 text-sm font-medium capitalize transition-colors border-b-2 -mb-px ${
+                tab === t
+                  ? "border-indigo-600 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              {t === "cycles" ? "Review Cycles" : t === "import" ? "Bulk Import" : "Households"}
+            </button>
+          ))}
+        </div>
+
+        {/* Households tab */}
+        {tab === "households" && (
+          <div className="space-y-4">
+            {addingClient ? (
+              <div className="border border-indigo-200 rounded-xl p-4 bg-indigo-50/20">
+                <h2 className="text-sm font-semibold text-gray-700 mb-3">Add Household</h2>
+                <AddClientForm
+                  reviewCycles={reviewCycles}
+                  onCreated={() => { setAddingClient(false); load(); }}
+                  onCancel={() => setAddingClient(false)}
+                />
+              </div>
+            ) : (
+              <button
+                onClick={() => setAddingClient(true)}
+                className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-500 hover:border-indigo-300 hover:text-indigo-600 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add household
+              </button>
+            )}
+
+            <ClientList
+              clients={clients}
+              reviewCycles={reviewCycles}
+              onChanged={load}
+            />
+          </div>
+        )}
+
+        {/* Review cycles tab */}
+        {tab === "cycles" && (
+          <ReviewCycleManager reviewCycles={reviewCycles} onChanged={load} />
+        )}
+
+        {/* Bulk import tab */}
+        {tab === "import" && (
+          <BulkImport onImported={load} />
+        )}
+      </div>
+    </div>
+  );
+}

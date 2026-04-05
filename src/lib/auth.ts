@@ -1,70 +1,21 @@
-import { NextAuthOptions } from 'next-auth'
-import CredentialsProvider from 'next-auth/providers/credentials'
-import { PrismaAdapter } from '@next-auth/prisma-adapter'
-import { prisma } from './prisma'
-import bcrypt from 'bcryptjs'
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { prisma } from "./prisma";
 
-export const authOptions: NextAuthOptions = {
-  secret: process.env.NEXTAUTH_SECRET,
-  adapter: PrismaAdapter(prisma),
-  session: {
-    strategy: 'jwt',
-  },
-  pages: {
-    signIn: '/auth/signin',
-  },
-  providers: [
-    CredentialsProvider({
-      name: 'credentials',
-      credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null
-        }
+export async function getAdvisorId(): Promise<string> {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Not authenticated");
+  return userId;
+}
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-        })
+export async function ensureUserExists(): Promise<string> {
+  const user = await currentUser();
+  if (!user) throw new Error("Not authenticated");
 
-        if (!user) {
-          return null
-        }
+  await prisma.user.upsert({
+    where: { id: user.id },
+    update: {},
+    create: { id: user.id },
+  });
 
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password,
-          user.password
-        )
-
-        if (!isPasswordValid) {
-          return null
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        }
-      },
-    }),
-  ],
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.role = (user as { role?: string }).role
-        token.id = user.id
-      }
-      return token
-    },
-    async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id as string
-        session.user.role = token.role as string
-      }
-      return session
-    },
-  },
+  return user.id;
 }

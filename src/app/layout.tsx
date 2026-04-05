@@ -1,22 +1,22 @@
-'use client'
+import type { Metadata } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
+import "./globals.css";
 
-import { SessionProvider } from 'next-auth/react'
-import './globals.css'
+export const metadata: Metadata = {
+  title: "Annua",
+  description: "Client milestone planning for financial advisors",
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <head>
-        <title>Annua</title>
-        <meta name="description" content="Annual client engagement cycle management" />
-      </head>
-      <body>
-        <SessionProvider>{children}</SessionProvider>
-      </body>
-    </html>
-  )
+    <ClerkProvider>
+      <html lang="en">
+        <body className="bg-gray-50 text-gray-900 antialiased">{children}</body>
+      </html>
+    </ClerkProvider>
+  );
 }

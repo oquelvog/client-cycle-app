@@ -5,61 +5,31 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
-  id               String        @id @default(cuid())
-  email            String        @unique
-  name             String?
-  password         String
-  role             String        @default("advisor")
-  createdAt        DateTime      @default(now())
-  clients          Client[]
-  sessions         Session[]
-  accounts         Account[]
-  reviewCycles     ReviewCycle[]
-}
-
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
-  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  @@unique([provider, providerAccountId])
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-  @@unique([identifier, token])
+  id           String        @id // Clerk user ID
+  createdAt    DateTime      @default(now())
+  reviewCycles ReviewCycle[]
+  clients      Client[]
 }
 
 model ReviewCycle {
   id         String      @id @default(cuid())
   name       String
   advisorId  String
-  advisor    User        @relation(fields: [advisorId], references: [id])
-  createdAt  DateTime    @default(now())
+  advisor    User        @relation(fields: [advisorId], references: [id], onDelete: Cascade)
   milestones Milestone[]
   clients    Client[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}
+
+enum DurationType {
+  specific_date
+  month
+  quarter
 }
 
 model Milestone {
@@ -67,14 +37,16 @@ model Milestone {
   title          String
   description    String?
   dayOfYear      Int
-  endDayOfYear   Int          @default(0)
-  durationType   String       @default("specific_date")
-  color          String       @default("#3B82F6")
-  reviewCycleId  String?
-  reviewCycle    ReviewCycle? @relation(fields: [reviewCycleId], references: [id], onDelete: SetNull)
-  createdAt      DateTime     @default(now())
+  endDayOfYear   Int
+  durationType   DurationType @default(specific_date)
+  color          String       @default("#6366f1")
+  order          Int          @default(0)
+  reviewCycleId  String
+  reviewCycle    ReviewCycle  @relation(fields: [reviewCycleId], references: [id], onDelete: Cascade)
   checkIns       CheckIn[]
-  clients        Client[]
+  currentClients Client[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 }
 
 model CheckIn {
@@ -87,6 +59,7 @@ model CheckIn {
   tasks          Task[]
   clientCheckIns ClientCheckIn[]
   createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 }
 
 model Task {
@@ -97,52 +70,58 @@ model Task {
   checkIn     CheckIn      @relation(fields: [checkInId], references: [id], onDelete: Cascade)
   clientTasks ClientTask[]
   createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 }
 
 model Client {
   id                 String          @id @default(cuid())
   name               String
-  email              String?
-  phone              String?
-  tags               String          @default("")
-  color              String          @default("#6B7280")
-  startDayOfYear     Int             @default(1)
-  advisorId          String
-  advisor            User            @relation(fields: [advisorId], references: [id])
-  reviewCycleId      String?
-  reviewCycle        ReviewCycle?    @relation(fields: [reviewCycleId], references: [id], onDelete: SetNull)
-  currentMilestoneId String?
-  currentMilestone   Milestone?      @relation(fields: [currentMilestoneId], references: [id], onDelete: SetNull)
-  cycleYear          Int             @default(0)
-  lastContacted      DateTime?
-  createdAt          DateTime        @default(now())
-  clientCheckIns     ClientCheckIn[]
-  clientTasks        ClientTask[]
+  color              String          @default("#6366f1")
+  tags               String[]
   notes              String?
+  lastContacted      DateTime?
+  cycleYear          Int             @default(2025)
+  reviewCycleId      String
+  reviewCycle        ReviewCycle     @relation(fields: [reviewCycleId], references: [id])
+  currentMilestoneId String?
+  currentMilestone   Milestone?      @relation(fields: [currentMilestoneId], references: [id])
+  advisorId          String
+  advisor            User            @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  clientTasks        ClientTask[]
+  clientCheckIns     ClientCheckIn[]
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+}
+
+enum TaskStatus {
+  pending
+  completed
+}
+
+model ClientTask {
+  id          String     @id @default(cuid())
+  clientId    String
+  client      Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  taskId      String
+  task        Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  status      TaskStatus @default(pending)
+  completedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([clientId, taskId])
 }
 
 model ClientCheckIn {
   id          String    @id @default(cuid())
   clientId    String
+  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
   checkInId   String
-  status      String    @default("pending")
-  completedAt DateTime?
-  notes       String?
-  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
   checkIn     CheckIn   @relation(fields: [checkInId], references: [id], onDelete: Cascade)
-  createdAt   DateTime  @default(now())
-  @@unique([clientId, checkInId])
-}
-
-model ClientTask {
-  id          String    @id @default(cuid())
-  clientId    String
-  taskId      String
-  status      String    @default("pending")
+  completed   Boolean   @default(false)
   completedAt DateTime?
-  notes       String?
-  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
   createdAt   DateTime  @default(now())
-  @@unique([clientId, taskId])
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([clientId, checkInId])
 }
