@@ -14,11 +14,15 @@ export default function Header({ title, subtitle }: HeaderProps) {
   const todayDay = getDayOfYear(today)
 
   return (
-    <header className="bg-white border-b border-gray-200 px-8 py-5">
+    <header className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 px-8 py-5">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-          {subtitle && <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>}
+        <div className="flex items-center gap-5">
+          <img src="/logo-dark.svg" alt="Annua" className="h-8 w-auto block dark:hidden" />
+          <img src="/logo-white.svg" alt="Annua" className="h-8 w-auto hidden dark:block" />
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{title}</h1>
+            {subtitle && <p className="text-sm text-gray-500 dark:text-slate-400 mt-0.5">{subtitle}</p>}
+          </div>
         </div>
         <div className="flex items-center gap-6">
           <div className="text-right">
