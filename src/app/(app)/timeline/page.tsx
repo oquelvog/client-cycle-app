@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ReviewCycle, Client, Milestone, Task, CheckIn } from "@/types";
-import { getReviewCycles } from "@/actions/review-cycles";
-import { getClients } from "@/actions/clients";
 import { MultiTimeline } from "@/components/timeline/MultiTimeline";
 import { HouseholdDetailPanel } from "@/components/panels/HouseholdDetailPanel";
 import { TaskChecklistPanel } from "@/components/panels/TaskChecklistPanel";
@@ -22,24 +20,25 @@ export default function TimelinePage() {
   const [clients, setClients] = useState<FullClient[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // View controls
   const [viewMode, setViewMode] = useState<"single" | "multi">("single");
   const [selectedCycleIds, setSelectedCycleIds] = useState<string[]>([]);
-
-  // Panels
   const [detailClientId, setDetailClientId] = useState<string | null>(null);
   const [checklistClientId, setChecklistClientId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
       setError(null);
-      const [cycles, cls] = await Promise.all([getReviewCycles(), getClients()]);
-      setReviewCycles(cycles as FullReviewCycle[]);
-      setClients(cls as FullClient[]);
-      if (selectedCycleIds.length === 0 && cycles.length > 0) {
-        setSelectedCycleIds(cycles.map((c) => c.id));
+      const res = await fetch("/api/data");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? `HTTP ${res.status}`);
       }
+      const { reviewCycles: cycles, clients: cls } = await res.json();
+      setReviewCycles(cycles);
+      setClients(cls);
+      setSelectedCycleIds((prev) =>
+        prev.length === 0 && cycles.length > 0 ? cycles.map((c: FullReviewCycle) => c.id) : prev
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -95,47 +94,32 @@ export default function TimelinePage() {
         <div className="px-3 py-3 border-b border-gray-100">
           <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">View</p>
           <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
-            <button
-              onClick={() => setViewMode("single")}
-              className={`flex-1 py-1.5 font-medium transition-colors ${viewMode === "single" ? "bg-indigo-600 text-white" : "text-gray-600 hover:bg-gray-50"}`}
-            >
+            <button onClick={() => setViewMode("single")} className={`flex-1 py-1.5 font-medium transition-colors ${viewMode === "single" ? "bg-indigo-600 text-white" : "text-gray-600 hover:bg-gray-50"}`}>
               Single
             </button>
-            <button
-              onClick={() => setViewMode("multi")}
-              className={`flex-1 py-1.5 font-medium transition-colors ${viewMode === "multi" ? "bg-indigo-600 text-white" : "text-gray-600 hover:bg-gray-50"}`}
-            >
+            <button onClick={() => setViewMode("multi")} className={`flex-1 py-1.5 font-medium transition-colors ${viewMode === "multi" ? "bg-indigo-600 text-white" : "text-gray-600 hover:bg-gray-50"}`}>
               Multi
             </button>
           </div>
         </div>
-
         <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1">
-          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">
-            Review Cycles
-          </p>
+          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Review Cycles</p>
           {reviewCycles.map((rc) => {
             const count = clients.filter((c) => c.reviewCycleId === rc.id).length;
             const active = selectedCycleIds.includes(rc.id);
             return (
-              <button
-                key={rc.id}
+              <button key={rc.id}
                 onClick={() => viewMode === "multi" ? toggleCycle(rc.id) : setSelectedCycleIds([rc.id])}
-                className={`w-full text-left px-2.5 py-2 rounded-lg text-xs transition-colors ${
-                  active ? "bg-indigo-50 text-indigo-700 font-medium" : "text-gray-600 hover:bg-gray-50"
-                }`}
-              >
+                className={`w-full text-left px-2.5 py-2 rounded-lg text-xs transition-colors ${active ? "bg-indigo-50 text-indigo-700 font-medium" : "text-gray-600 hover:bg-gray-50"}`}>
                 <p className="truncate">{rc.name}</p>
-                <p className={`text-[10px] mt-0.5 ${active ? "text-indigo-400" : "text-gray-400"}`}>
-                  {count} household{count !== 1 ? "s" : ""}
-                </p>
+                <p className={`text-[10px] mt-0.5 ${active ? "text-indigo-400" : "text-gray-400"}`}>{count} household{count !== 1 ? "s" : ""}</p>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Main timeline area */}
+      {/* Main timeline */}
       <div className="flex-1 overflow-hidden flex flex-col min-w-0">
         <MultiTimeline
           reviewCycles={reviewCycles}
@@ -147,28 +131,19 @@ export default function TimelinePage() {
         />
       </div>
 
-      {/* Right: household detail panel */}
       {detailClient && (
         <div className="w-72 shrink-0 overflow-hidden border-l border-gray-200">
-          <HouseholdDetailPanel
-            client={detailClient}
-            reviewCycles={reviewCycles}
-            onClose={() => setDetailClientId(null)}
-            onRefresh={load}
-          />
+          <HouseholdDetailPanel client={detailClient} reviewCycles={reviewCycles} onClose={() => setDetailClientId(null)} onRefresh={load} />
         </div>
       )}
 
-      {/* Task checklist panel (modal) */}
       {checklistClient && (
         <TaskChecklistPanel
           open={!!checklistClient}
           onClose={() => { setChecklistClientId(null); load(); }}
           client={checklistClient}
           milestone={checklistClient.currentMilestone}
-          allMilestones={
-            reviewCycles.find((rc) => rc.id === checklistClient.reviewCycleId)?.milestones ?? []
-          }
+          allMilestones={reviewCycles.find((rc) => rc.id === checklistClient.reviewCycleId)?.milestones ?? []}
           onRefresh={load}
         />
       )}
