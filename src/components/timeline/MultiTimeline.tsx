@@ -13,7 +13,7 @@ import {
   currentYear,
 } from "@/lib/timeline";
 import { MilestoneBlock } from "./MilestoneBlock";
-import { ClientTag } from "./ClientTag";
+import { ClientTagGroup } from "./ClientTagGroup";
 import { NeedsAttentionGutter } from "./NeedsAttentionGutter";
 import { UnassignedBand } from "./UnassignedBand";
 import { AdvancementDialog } from "@/components/modals/AdvancementDialog";
@@ -349,21 +349,18 @@ function SharedTimelineCanvas({
                     return (
                       <div
                         key={`tags-${m.id}`}
-                        className="absolute flex flex-col gap-1 pl-3 z-10"
+                        className="absolute flex flex-col items-start gap-1 pl-3 z-10"
                         style={{ top: pos.topPx + 2, left: "calc(50% + 12px)", right: 0 }}
                       >
-                        {mClients.map((c) => (
-                          <ClientTag
-                            key={c.id}
-                            client={c}
-                            milestone={m}
-                            stats={statsMap[c.id] ?? { total: 0, completed: 0 }}
-                            onOpenDetail={() => onOpenDetail(c.id)}
-                            onOpenChecklist={() => onOpenChecklist(c.id)}
-                            onAdvancementNeeded={() => handleAdvancementNeeded(c.id)}
-                            onYearUpdated={onRefresh}
-                          />
-                        ))}
+                        <ClientTagGroup
+                          clients={mClients}
+                          milestone={m}
+                          statsMap={statsMap}
+                          onOpenDetail={onOpenDetail}
+                          onOpenChecklist={onOpenChecklist}
+                          onAdvancementNeeded={handleAdvancementNeeded}
+                          onYearUpdated={onRefresh}
+                        />
                       </div>
                     );
                   })}
