@@ -2,6 +2,8 @@ import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { ensureUserExists } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export default async function AppLayout({
   children,
 }: {
