@@ -36,10 +36,10 @@ export function ClientTag({
   // This component just signals upward — parent handles dialog
   // We show the visual but parent listens via onAdvancementNeeded when tag opens
   const tagColor = allComplete
-    ? "bg-green-100 text-green-800"
+    ? "bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300"
     : stats.completed > 0
-    ? "bg-amber-100 text-amber-800"
-    : "bg-gray-100 text-gray-700";
+    ? "bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300"
+    : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200";
 
   async function handleYearSelect(year: number) {
     setUpdatingYear(true);
@@ -53,7 +53,7 @@ export function ClientTag({
   }
 
   return (
-    <div className="relative inline-flex items-stretch rounded-full shadow-sm border border-gray-200 bg-white overflow-visible text-xs font-medium">
+    <div className="relative inline-flex items-stretch rounded-full shadow-sm border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 overflow-visible text-xs font-medium">
       {/* Left segment: name + X/Y */}
       <button
         onClick={onOpenDetail}
@@ -76,15 +76,15 @@ export function ClientTag({
       </button>
 
       {/* Divider */}
-      <div className="w-px bg-gray-200 self-stretch" />
+      <div className="w-px bg-gray-200 dark:bg-gray-600 self-stretch" />
 
       {/* Middle segment: cycleYear badge */}
       <div className="relative">
         <button
           onClick={() => setYearDropdownOpen((v) => !v)}
           className={cn(
-            "flex items-center px-2 py-1 hover:bg-gray-50 transition-colors",
-            isYearBehind && "text-amber-600 bg-amber-50"
+            "flex items-center px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-200",
+            isYearBehind && "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30"
           )}
           title="Change cycle year"
         >
@@ -94,14 +94,14 @@ export function ClientTag({
           </svg>
         </button>
         {yearDropdownOpen && (
-          <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 min-w-[80px]">
+          <div className="absolute left-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg dark:shadow-black/40 z-50 py-1 min-w-[80px]">
             {[yr, yr + 1].map((y) => (
               <button
                 key={y}
                 onClick={() => handleYearSelect(y)}
                 className={cn(
-                  "w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 transition-colors",
-                  client.cycleYear === y && "font-semibold text-indigo-600"
+                  "w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition-colors",
+                  client.cycleYear === y && "font-semibold text-indigo-600 dark:text-indigo-400"
                 )}
               >
                 {y}
@@ -112,7 +112,7 @@ export function ClientTag({
       </div>
 
       {/* Divider */}
-      <div className="w-px bg-gray-200 self-stretch" />
+      <div className="w-px bg-gray-200 dark:bg-gray-600 self-stretch" />
 
       {/* Right segment: arrow → checklist */}
       <button
@@ -123,10 +123,10 @@ export function ClientTag({
             onOpenChecklist();
           }
         }}
-        className="flex items-center px-2 py-1 rounded-r-full hover:bg-gray-50 transition-colors"
+        className="flex items-center px-2 py-1 rounded-r-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
         title="Open task checklist"
       >
-        <svg className="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-3 h-3 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
       </button>
