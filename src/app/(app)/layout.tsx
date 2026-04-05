@@ -9,7 +9,14 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await ensureUserExists();
+  // Best-effort: create user record if authenticated. Middleware handles
+  // redirecting unauthenticated requests before this layout renders.
+  try {
+    await ensureUserExists();
+  } catch {
+    // Not authenticated — middleware will redirect; swallow here to avoid
+    // a server exception during any edge-case render.
+  }
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
