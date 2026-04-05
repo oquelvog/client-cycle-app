@@ -8,6 +8,7 @@ import {
   dateToPx,
   today,
   isNeedsAttention,
+  getDayOfYear,
   currentYear,
   PIXELS_PER_DAY,
 } from "@/lib/timeline";
@@ -50,6 +51,8 @@ export function Timeline({
   const { windowStart, windowEnd, totalPx } = getWindowBounds();
   const monthBands = getMonthBands(windowStart, windowEnd);
   const todayPx = dateToPx(today(), windowStart);
+  const yr = currentYear();
+  const todayDoy = getDayOfYear(today());
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [statsMap, setStatsMap] = useState<Record<string, { total: number; completed: number }>>({});
@@ -88,6 +91,11 @@ export function Timeline({
 
   const needsAttention = assignedClients.filter((c) => {
     if (!c.currentMilestone) return false;
+    // Lagging: cycle year is behind the current year AND the milestone window has
+    // already closed this year (end date passed) — client is overdue.
+    if (c.cycleYear < yr && c.currentMilestone.endDayOfYear < todayDoy) return true;
+    // Original logic: milestone is not visible in the rolling window AND
+    // the most recent past occurrence was more than 182 days ago.
     const pos = getMilestonePosition(
       c.currentMilestone.dayOfYear,
       c.currentMilestone.endDayOfYear,
@@ -156,8 +164,8 @@ export function Timeline({
       </div>
 
       {/* Multi-client action button */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100">
-        <span className="text-xs text-gray-400">Rolling 12-month timeline</span>
+      <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 dark:border-gray-800">
+        <span className="text-xs text-gray-400 dark:text-gray-500">Rolling 12-month timeline</span>
         <button
           onClick={() => setMultiActionOpen(true)}
           className="text-xs font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
@@ -180,17 +188,17 @@ export function Timeline({
           {monthBands.map((band, i) => (
             <div
               key={i}
-              className={`absolute inset-x-0 ${band.isAlternate ? "bg-gray-50" : "bg-white"}`}
+              className={`absolute inset-x-0 ${band.isAlternate ? "bg-gray-50 dark:bg-gray-900/40" : "bg-white dark:bg-transparent"}`}
               style={{ top: band.topPx, height: band.heightPx }}
             >
-              <span className="absolute left-0 top-1 text-[10px] text-gray-300 font-medium pl-1">
+              <span className="absolute left-0 top-1 text-[10px] text-gray-300 dark:text-gray-600 font-medium pl-1">
                 {band.label}
               </span>
             </div>
           ))}
 
           {/* Center line */}
-          <div className="absolute inset-y-0 left-1/2 w-px bg-gray-200" />
+          <div className="absolute inset-y-0 left-1/2 w-px bg-gray-200 dark:bg-gray-700" />
 
           {/* Today line */}
           <div

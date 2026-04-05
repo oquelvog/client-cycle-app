@@ -58,11 +58,14 @@ export function EditClientForm({ client, reviewCycles, onSaved, onClose }: Props
     }
   }
 
+  const inputCls = "w-full mt-1 text-sm border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400";
+  const labelCls = "text-xs font-medium text-gray-700 dark:text-gray-300";
+
   return (
-    <form onSubmit={handleSave} className="border border-gray-200 rounded-xl p-4 bg-gray-50 space-y-3">
+    <form onSubmit={handleSave} className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50 dark:bg-gray-800/50 space-y-3">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-xs font-semibold text-gray-600">Editing {client.name}</span>
-        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600">
+        <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">Editing {client.name}</span>
+        <button type="button" onClick={onClose} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -70,16 +73,12 @@ export function EditClientForm({ client, reviewCycles, onSaved, onClose }: Props
       </div>
 
       <div>
-        <label className="text-xs font-medium text-gray-700">Name</label>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full mt-1 text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
-        />
+        <label className={labelCls}>Name</label>
+        <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
       </div>
 
       <div>
-        <label className="text-xs font-medium text-gray-700">Color</label>
+        <label className={labelCls}>Color</label>
         <div className="flex gap-1.5 flex-wrap mt-1">
           {COLORS.map((c) => (
             <button
@@ -92,20 +91,16 @@ export function EditClientForm({ client, reviewCycles, onSaved, onClose }: Props
       </div>
 
       <div>
-        <label className="text-xs font-medium text-gray-700">Tags</label>
-        <input
-          value={tagsInput}
-          onChange={(e) => setTagsInput(e.target.value)}
-          className="w-full mt-1 text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
-        />
+        <label className={labelCls}>Tags</label>
+        <input value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} className={inputCls} />
       </div>
 
       <div>
-        <label className="text-xs font-medium text-gray-700">Touchpoint Cycle</label>
+        <label className={labelCls}>Touchpoint Cycle</label>
         <select
           value={reviewCycleId}
           onChange={(e) => { setReviewCycleId(e.target.value); setMilestoneId(""); }}
-          className="w-full mt-1 text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
+          className={inputCls}
         >
           {reviewCycles.map((rc) => (
             <option key={rc.id} value={rc.id}>{rc.name}</option>
@@ -114,12 +109,8 @@ export function EditClientForm({ client, reviewCycles, onSaved, onClose }: Props
       </div>
 
       <div>
-        <label className="text-xs font-medium text-gray-700">Milestone</label>
-        <select
-          value={milestoneId}
-          onChange={(e) => setMilestoneId(e.target.value)}
-          className="w-full mt-1 text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
-        >
+        <label className={labelCls}>Milestone</label>
+        <select value={milestoneId} onChange={(e) => setMilestoneId(e.target.value)} className={inputCls}>
           <option value="">Unassigned</option>
           {milestones.map((m) => (
             <option key={m.id} value={m.id}>{m.title}</option>
@@ -130,16 +121,14 @@ export function EditClientForm({ client, reviewCycles, onSaved, onClose }: Props
       <div className="flex items-center justify-between pt-1">
         {confirmDelete ? (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-red-600">Are you sure?</span>
+            <span className="text-xs text-red-600 dark:text-red-400">Are you sure?</span>
             <Button type="button" size="sm" variant="danger" onClick={handleDelete} disabled={deleting}>
               {deleting ? "Deleting…" : "Yes, delete"}
             </Button>
-            <Button type="button" size="sm" variant="ghost" onClick={() => setConfirmDelete(false)}>
-              No
-            </Button>
+            <Button type="button" size="sm" variant="ghost" onClick={() => setConfirmDelete(false)}>No</Button>
           </div>
         ) : (
-          <Button type="button" size="sm" variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50"
+          <Button type="button" size="sm" variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
             onClick={() => setConfirmDelete(true)}>
             Delete
           </Button>

@@ -10,6 +10,8 @@ import {
   dateToPx,
   today,
   isNeedsAttention,
+  getDayOfYear,
+  currentYear,
 } from "@/lib/timeline";
 import { MilestoneBlock } from "./MilestoneBlock";
 import { ClientTag } from "./ClientTag";
@@ -97,6 +99,8 @@ function SharedTimelineCanvas({
   const { windowStart, windowEnd, totalPx } = getWindowBounds();
   const monthBands = getMonthBands(windowStart, windowEnd);
   const todayPx = dateToPx(today(), windowStart);
+  const yr = currentYear();
+  const todayDoy = getDayOfYear(today());
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [statsMap, setStatsMap] = useState<Record<string, { total: number; completed: number }>>({});
@@ -137,6 +141,9 @@ function SharedTimelineCanvas({
 
   const needsAttention = assignedClients.filter((c) => {
     if (!c.currentMilestone) return false;
+    // Lagging: cycle year is behind AND the milestone window has already closed.
+    if (c.cycleYear < yr && c.currentMilestone.endDayOfYear < todayDoy) return true;
+    // Original logic: milestone not visible in window AND 182+ days since last occurrence.
     const pos = getMilestonePosition(
       c.currentMilestone.dayOfYear,
       c.currentMilestone.endDayOfYear,

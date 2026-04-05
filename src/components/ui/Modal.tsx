@@ -33,7 +33,7 @@ export function Modal({ open, onClose, children, size = "md", className }: Modal
       <div
         ref={ref}
         className={cn(
-          "relative z-10 bg-white rounded-xl shadow-2xl",
+          "relative z-10 bg-white dark:bg-gray-900 rounded-xl shadow-2xl dark:shadow-black/50",
           size === "sm" && "w-full max-w-sm",
           size === "md" && "w-full max-w-md",
           size === "lg" && "w-full max-w-2xl",

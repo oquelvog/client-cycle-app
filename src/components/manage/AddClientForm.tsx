@@ -40,10 +40,7 @@ export function AddClientForm({ reviewCycles, onCreated, onCancel }: Props) {
       await createClient({
         name: name.trim(),
         color,
-        tags: tagsInput
-          .split(",")
-          .map((t) => t.trim())
-          .filter(Boolean),
+        tags: tagsInput.split(",").map((t) => t.trim()).filter(Boolean),
         reviewCycleId,
         currentMilestoneId: milestoneId || undefined,
         cycleYear: new Date().getFullYear(),
@@ -56,28 +53,31 @@ export function AddClientForm({ reviewCycles, onCreated, onCancel }: Props) {
     }
   }
 
+  const inputCls = "w-full text-sm border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400";
+  const labelCls = "block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1";
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+        <p className="text-xs text-red-600 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-lg px-3 py-2">
           {error}
         </p>
       )}
 
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">
+        <label className={labelCls}>
           Client Name <span className="text-red-500">*</span>
         </label>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g. Johnson Family"
-          className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
+          className={inputCls}
         />
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">Color</label>
+        <label className={labelCls}>Color</label>
         <div className="flex gap-2 flex-wrap">
           {COLORS.map((c) => (
             <button
@@ -92,25 +92,25 @@ export function AddClientForm({ reviewCycles, onCreated, onCancel }: Props) {
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">
-          Tags <span className="text-gray-400 font-normal">(comma separated)</span>
+        <label className={labelCls}>
+          Tags <span className="text-gray-400 font-normal dark:text-gray-500">(comma separated)</span>
         </label>
         <input
           value={tagsInput}
           onChange={(e) => setTagsInput(e.target.value)}
           placeholder="e.g. HNW, Retiree"
-          className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
+          className={inputCls}
         />
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">
+        <label className={labelCls}>
           Touchpoint Cycle <span className="text-red-500">*</span>
         </label>
         <select
           value={reviewCycleId}
           onChange={(e) => { setReviewCycleId(e.target.value); setMilestoneId(""); }}
-          className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
+          className={inputCls}
         >
           <option value="">Select…</option>
           {reviewCycles.map((rc) => (
@@ -120,14 +120,14 @@ export function AddClientForm({ reviewCycles, onCreated, onCancel }: Props) {
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">
-          Starting Milestone <span className="text-gray-400 font-normal">(optional)</span>
+        <label className={labelCls}>
+          Starting Milestone <span className="text-gray-400 font-normal dark:text-gray-500">(optional)</span>
         </label>
         <select
           value={milestoneId}
           onChange={(e) => setMilestoneId(e.target.value)}
           disabled={milestones.length === 0}
-          className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 disabled:bg-gray-50 disabled:text-gray-400"
+          className={`${inputCls} disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           <option value="">Unassigned</option>
           {milestones.map((m) => (

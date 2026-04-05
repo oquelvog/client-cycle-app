@@ -76,14 +76,12 @@ export function TaskChecklistPanel({ open, onClose, client, milestone, allMilest
   async function handleToggle(taskId: string, completed: boolean) {
     const stats = await toggleClientTask(client.id, taskId, completed);
     await load();
-    // Rule 3: If now all complete, trigger advancement dialog immediately
     if (stats.total > 0 && stats.completed === stats.total) {
       setShowAdvancement(true);
     }
   }
 
   async function handleFinishAll() {
-    // Rule 4: Show confirmation dialog before advancing
     setShowAdvancement(true);
   }
 
@@ -115,12 +113,12 @@ export function TaskChecklistPanel({ open, onClose, client, milestone, allMilest
         <div className="p-5">
           <div className="flex items-start justify-between mb-3">
             <div>
-              <h3 className="font-semibold text-gray-900">{client.name}</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">{client.name}</h3>
               {milestone && (
-                <p className="text-xs text-gray-500 mt-0.5">{milestone.title}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{milestone.title}</p>
               )}
             </div>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -142,11 +140,11 @@ export function TaskChecklistPanel({ open, onClose, client, milestone, allMilest
           {/* Progress bar */}
           {total > 0 && (
             <div className="mb-4">
-              <div className="flex justify-between text-xs text-gray-500 mb-1">
+              <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
                 <span>{completed}/{total} tasks</span>
                 <span>{pct}%</span>
               </div>
-              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all ${allComplete ? "bg-green-500" : "bg-indigo-500"}`}
                   style={{ width: `${pct}%` }}
@@ -157,16 +155,16 @@ export function TaskChecklistPanel({ open, onClose, client, milestone, allMilest
 
           {/* Tasks */}
           {loading ? (
-            <div className="py-8 text-center text-sm text-gray-400">Loading…</div>
+            <div className="py-8 text-center text-sm text-gray-400 dark:text-gray-500">Loading…</div>
           ) : checkIns.length === 0 ? (
-            <div className="py-8 text-center text-sm text-gray-400">
+            <div className="py-8 text-center text-sm text-gray-400 dark:text-gray-500">
               No tasks for this milestone.
             </div>
           ) : (
             <div className="space-y-4 max-h-72 overflow-y-auto">
               {checkIns.map((ci) => (
                 <div key={ci.id}>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
                     {ci.title}
                   </p>
                   <div className="space-y-1.5">
@@ -179,14 +177,14 @@ export function TaskChecklistPanel({ open, onClose, client, milestone, allMilest
                           type="checkbox"
                           checked={isTaskComplete(task)}
                           onChange={(e) => handleToggle(task.id, e.target.checked)}
-                          className="mt-0.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                          className="mt-0.5 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
                         />
                         <div>
-                          <span className={`text-sm ${isTaskComplete(task) ? "line-through text-gray-400" : "text-gray-700"}`}>
+                          <span className={`text-sm ${isTaskComplete(task) ? "line-through text-gray-400" : "text-gray-700 dark:text-gray-300"}`}>
                             {task.title}
                           </span>
                           {task.description && (
-                            <p className="text-xs text-gray-400 mt-0.5">{task.description}</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{task.description}</p>
                           )}
                         </div>
                       </label>
@@ -197,13 +195,10 @@ export function TaskChecklistPanel({ open, onClose, client, milestone, allMilest
             </div>
           )}
 
-          {/* Footer actions */}
-          <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-gray-100">
+          {/* Footer */}
+          <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-gray-100 dark:border-gray-800">
             <Button variant="secondary" onClick={onClose}>Close</Button>
-            <Button
-              onClick={handleFinishAll}
-              disabled={allComplete}
-            >
+            <Button onClick={handleFinishAll} disabled={allComplete}>
               Finish All &amp; Advance
             </Button>
           </div>
