@@ -21,6 +21,7 @@ export default function TimelinePage() {
   const [reviewCycles, setReviewCycles] = useState<FullReviewCycle[]>([]);
   const [clients, setClients] = useState<FullClient[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // View controls
   const [viewMode, setViewMode] = useState<"single" | "multi">("single");
@@ -31,13 +32,19 @@ export default function TimelinePage() {
   const [checklistClientId, setChecklistClientId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [cycles, cls] = await Promise.all([getReviewCycles(), getClients()]);
-    setReviewCycles(cycles as FullReviewCycle[]);
-    setClients(cls as FullClient[]);
-    if (selectedCycleIds.length === 0 && cycles.length > 0) {
-      setSelectedCycleIds(cycles.map((c) => c.id));
+    try {
+      setError(null);
+      const [cycles, cls] = await Promise.all([getReviewCycles(), getClients()]);
+      setReviewCycles(cycles as FullReviewCycle[]);
+      setClients(cls as FullClient[]);
+      if (selectedCycleIds.length === 0 && cycles.length > 0) {
+        setSelectedCycleIds(cycles.map((c) => c.id));
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -55,6 +62,16 @@ export default function TimelinePage() {
     return (
       <div className="h-full flex items-center justify-center text-sm text-gray-400">
         Loading timeline…
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-3 px-4 text-center">
+        <p className="text-sm font-medium text-red-600">Failed to load data</p>
+        <pre className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg p-3 max-w-lg whitespace-pre-wrap break-all">{error}</pre>
+        <button onClick={load} className="text-xs text-indigo-600 hover:underline">Retry</button>
       </div>
     );
   }

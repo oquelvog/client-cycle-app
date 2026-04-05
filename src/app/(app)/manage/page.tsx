@@ -25,13 +25,20 @@ export default function ManagePage() {
   const [reviewCycles, setReviewCycles] = useState<FullReviewCycle[]>([]);
   const [clients, setClients] = useState<FullClient[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [addingClient, setAddingClient] = useState(false);
 
   const load = useCallback(async () => {
-    const [cycles, cls] = await Promise.all([getReviewCycles(), getClients()]);
-    setReviewCycles(cycles as FullReviewCycle[]);
-    setClients(cls as FullClient[]);
-    setLoading(false);
+    try {
+      setError(null);
+      const [cycles, cls] = await Promise.all([getReviewCycles(), getClients()]);
+      setReviewCycles(cycles as FullReviewCycle[]);
+      setClients(cls as FullClient[]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -40,6 +47,16 @@ export default function ManagePage() {
     return (
       <div className="h-full flex items-center justify-center text-sm text-gray-400">
         Loading…
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-3 px-4 text-center">
+        <p className="text-sm font-medium text-red-600">Failed to load data</p>
+        <pre className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg p-3 max-w-lg whitespace-pre-wrap break-all">{error}</pre>
+        <button onClick={load} className="text-xs text-indigo-600 hover:underline">Retry</button>
       </div>
     );
   }
