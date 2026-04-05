@@ -67,7 +67,7 @@ export function BulkImport({ onImported }: Props) {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-xs text-gray-500">
-          Upload an Excel or Google Sheets file to import households in bulk.
+          Upload an Excel or Google Sheets file to import clients in bulk.
         </p>
         <Button size="sm" variant="ghost" onClick={downloadTemplate}>
           Download template
@@ -102,7 +102,7 @@ export function BulkImport({ onImported }: Props) {
       {result && (
         <div className={`rounded-lg p-3 text-sm ${result.errors.length > 0 ? "bg-amber-50 border border-amber-200" : "bg-green-50 border border-green-200"}`}>
           <p className={`font-medium mb-1 ${result.errors.length > 0 ? "text-amber-800" : "text-green-800"}`}>
-            {result.created} household{result.created !== 1 ? "s" : ""} imported
+            {result.created} client{result.created !== 1 ? "s" : ""} imported
             {result.errors.length > 0 && `, ${result.errors.length} error${result.errors.length !== 1 ? "s" : ""}`}
           </p>
           {result.errors.length > 0 && (

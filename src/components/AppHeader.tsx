@@ -23,7 +23,7 @@ export function AppHeader() {
 
   const navLinks = [
     { href: "/timeline", label: "View Timelines" },
-    { href: "/manage", label: "Manage Households & Timelines" },
+    { href: "/manage", label: "Manage Clients & Cycles" },
   ];
 
   return (

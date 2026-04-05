@@ -31,8 +31,8 @@ export function AddClientForm({ reviewCycles, onCreated, onCancel }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) return setError("Household name is required.");
-    if (!reviewCycleId) return setError("Select a review cycle.");
+    if (!name.trim()) return setError("Client name is required.");
+    if (!reviewCycleId) return setError("Select a touchpoint cycle.");
 
     setLoading(true);
     setError("");
@@ -50,7 +50,7 @@ export function AddClientForm({ reviewCycles, onCreated, onCancel }: Props) {
       });
       onCreated();
     } catch {
-      setError("Failed to create household. Please try again.");
+      setError("Failed to create client. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -66,7 +66,7 @@ export function AddClientForm({ reviewCycles, onCreated, onCancel }: Props) {
 
       <div>
         <label className="block text-xs font-medium text-gray-700 mb-1">
-          Household Name <span className="text-red-500">*</span>
+          Client Name <span className="text-red-500">*</span>
         </label>
         <input
           value={name}
@@ -105,7 +105,7 @@ export function AddClientForm({ reviewCycles, onCreated, onCancel }: Props) {
 
       <div>
         <label className="block text-xs font-medium text-gray-700 mb-1">
-          Review Cycle <span className="text-red-500">*</span>
+          Touchpoint Cycle <span className="text-red-500">*</span>
         </label>
         <select
           value={reviewCycleId}
@@ -139,7 +139,7 @@ export function AddClientForm({ reviewCycles, onCreated, onCancel }: Props) {
       <div className="flex justify-end gap-2 pt-1">
         <Button type="button" variant="secondary" onClick={onCancel}>Cancel</Button>
         <Button type="submit" disabled={loading}>
-          {loading ? "Adding…" : "Add Household"}
+          {loading ? "Adding…" : "Add Client"}
         </Button>
       </div>
     </form>

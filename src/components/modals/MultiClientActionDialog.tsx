@@ -162,7 +162,7 @@ export function MultiClientActionDialog({
         {step === 3 && (
           <div>
             <p className="text-sm text-gray-600 mb-3">
-              Apply to which households?{" "}
+              Apply to which clients?{" "}
               <button
                 className="text-indigo-600 hover:underline text-xs"
                 onClick={() =>
@@ -192,7 +192,7 @@ export function MultiClientActionDialog({
                 </label>
               ))}
               {clientsInMilestone.length === 0 && (
-                <p className="text-sm text-gray-400 italic">No households in this milestone.</p>
+                <p className="text-sm text-gray-400 italic">No clients in this milestone.</p>
               )}
             </div>
             <div className="flex justify-between mt-4">

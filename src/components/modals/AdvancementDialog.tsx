@@ -26,7 +26,7 @@ export function AdvancementDialog({
     <Modal open={open} onClose={onCancel} size="sm">
       <div className="p-5">
         <h3 className="text-base font-semibold text-gray-900 mb-1">
-          Advance household?
+          Advance client?
         </h3>
         <p className="text-sm text-gray-600 mb-4">
           <span className="font-medium">{clientName}</span> has completed all

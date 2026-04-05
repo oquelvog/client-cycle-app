@@ -29,7 +29,7 @@ export function NeedsAttentionGutter({
         <span className="text-xs font-semibold text-red-700 uppercase tracking-wide">
           Needs Attention
         </span>
-        <span className="ml-auto text-xs text-red-400">{clients.length} household{clients.length !== 1 ? "s" : ""}</span>
+        <span className="ml-auto text-xs text-red-400">{clients.length} client{clients.length !== 1 ? "s" : ""}</span>
       </div>
       <div className="flex flex-wrap gap-1.5">
         {clients.map((client) => (

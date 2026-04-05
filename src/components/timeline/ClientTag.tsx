@@ -61,7 +61,7 @@ export function ClientTag({
           "flex items-center gap-1 pl-2.5 pr-2 py-1 rounded-l-full hover:opacity-80 transition-opacity",
           tagColor
         )}
-        title="View household details"
+        title="View client details"
       >
         <span
           className="w-1.5 h-1.5 rounded-full shrink-0"

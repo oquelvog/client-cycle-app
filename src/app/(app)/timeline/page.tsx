@@ -81,8 +81,8 @@ export default function TimelinePage() {
         <svg className="w-10 h-10 text-gray-200 dark:text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
-        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">No review cycles yet</p>
-        <p className="text-xs text-gray-400 dark:text-gray-500">Go to Manage to create your first review cycle and add households.</p>
+        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">No touchpoint cycles yet</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500">Go to Manage to create your first touchpoint cycle and add clients.</p>
       </div>
     );
   }
@@ -129,7 +129,7 @@ export default function TimelinePage() {
                 <div className="text-left min-w-0">
                   <p className="truncate font-medium">{rc.name}</p>
                   <p className={`text-[10px] mt-0.5 ${active ? "text-indigo-400 dark:text-indigo-400" : "text-gray-400 dark:text-gray-500"}`}>
-                    {count} household{count !== 1 ? "s" : ""}
+                    {count} client{count !== 1 ? "s" : ""}
                   </p>
                 </div>
               </button>

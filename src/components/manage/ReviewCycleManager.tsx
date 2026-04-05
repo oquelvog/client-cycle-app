@@ -324,7 +324,7 @@ export function ReviewCycleManager({ reviewCycles, onChanged }: Props) {
           value={newCycleName}
           onChange={(e) => setNewCycleName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleAddCycle()}
-          placeholder="New review cycle name…"
+          placeholder="New touchpoint cycle name…"
           className="flex-1 text-sm border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
         />
         <Button onClick={handleAddCycle} disabled={addingCycle || !newCycleName.trim()}>
@@ -484,7 +484,7 @@ export function ReviewCycleManager({ reviewCycles, onChanged }: Props) {
                 onClick={() => deleteReviewCycle(cycle.id).then(onChanged)}
                 className="text-xs text-red-400 hover:text-red-600 dark:hover:text-red-300"
               >
-                Delete this review cycle
+                Delete this touchpoint cycle
               </button>
             </div>
           )}

@@ -27,13 +27,13 @@ export function ClientList({ clients, reviewCycles, onChanged }: Props) {
       <input
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search households…"
+        placeholder="Search clients…"
         className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
       />
 
       {filtered.length === 0 ? (
         <p className="text-sm text-gray-400 italic py-4 text-center">
-          {search ? "No households match." : "No households yet."}
+          {search ? "No clients match." : "No clients yet."}
         </p>
       ) : (
         <div className="space-y-1.5">

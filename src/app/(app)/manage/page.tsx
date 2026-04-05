@@ -82,7 +82,7 @@ export default function ManagePage() {
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
               }`}
             >
-              {t === "cycles" ? "Review Cycles" : t === "import" ? "Bulk Import" : "Households"}
+              {t === "cycles" ? "Touchpoint Cycles" : t === "import" ? "Bulk Import" : "Clients"}
             </button>
           ))}
         </div>
@@ -91,7 +91,7 @@ export default function ManagePage() {
           <div className="space-y-4">
             {addingClient ? (
               <div className="border border-indigo-200 dark:border-indigo-800 rounded-xl p-4 bg-indigo-50/20 dark:bg-indigo-950/20">
-                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Add Household</h2>
+                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Add Client</h2>
                 <AddClientForm
                   reviewCycles={reviewCycles}
                   onCreated={() => { setAddingClient(false); load(); }}
@@ -106,7 +106,7 @@ export default function ManagePage() {
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                Add household
+                Add client
               </button>
             )}
             <ClientList clients={clients} reviewCycles={reviewCycles} onChanged={load} />

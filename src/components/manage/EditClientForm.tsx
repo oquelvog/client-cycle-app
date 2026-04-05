@@ -101,7 +101,7 @@ export function EditClientForm({ client, reviewCycles, onSaved, onClose }: Props
       </div>
 
       <div>
-        <label className="text-xs font-medium text-gray-700">Review Cycle</label>
+        <label className="text-xs font-medium text-gray-700">Touchpoint Cycle</label>
         <select
           value={reviewCycleId}
           onChange={(e) => { setReviewCycleId(e.target.value); setMilestoneId(""); }}
