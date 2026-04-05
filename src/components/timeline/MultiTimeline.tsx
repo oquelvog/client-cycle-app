@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Client, Milestone, ReviewCycle, Task, CheckIn } from "@/types";
-import { Timeline } from "./Timeline";
 import {
   getWindowBounds,
   getMonthBands,
@@ -21,6 +20,8 @@ import { AdvancementDialog } from "@/components/modals/AdvancementDialog";
 import { MultiClientActionDialog } from "@/components/modals/MultiClientActionDialog";
 import { advanceClient } from "@/actions/clients";
 import { getLiveStats } from "@/actions/tasks";
+
+const MONTH_COL_WIDTH = 96; // px — matches Tailwind w-24
 
 type FullReviewCycle = ReviewCycle & {
   milestones: (Milestone & { checkIns: (CheckIn & { tasks: Task[] })[] })[];
@@ -53,20 +54,11 @@ export function MultiTimeline({
   onRefresh,
 }: Props) {
   // reviewCycles is already in drag-drop order from the parent.
-  // Array.filter preserves order, so visibleCycles is also ordered correctly.
-  const visibleCycles = reviewCycles.filter((rc) => selectedCycleIds.includes(rc.id));
-
-  if (visibleCycles.length <= 1) {
-    return (
-      <Timeline
-        reviewCycles={visibleCycles.length === 1 ? visibleCycles : reviewCycles}
-        clients={clients}
-        onOpenDetail={onOpenDetail}
-        onOpenChecklist={onOpenChecklist}
-        onRefresh={onRefresh}
-      />
-    );
-  }
+  // When nothing is selected, show all cycles.
+  const visibleCycles =
+    selectedCycleIds.length > 0
+      ? reviewCycles.filter((rc) => selectedCycleIds.includes(rc.id))
+      : reviewCycles;
 
   return (
     <SharedTimelineCanvas
@@ -79,7 +71,7 @@ export function MultiTimeline({
   );
 }
 
-// ── Shared multi-column canvas ────────────────────────────────────────────────
+// ── Shared column canvas ──────────────────────────────────────────────────────
 
 interface SharedProps {
   visibleCycles: FullReviewCycle[];
@@ -188,7 +180,7 @@ function SharedTimelineCanvas({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Warning bands — span all columns */}
+      {/* Warning bands */}
       <div className="px-4 pt-3 space-y-0">
         <NeedsAttentionGutter
           clients={needsAttention}
@@ -217,16 +209,24 @@ function SharedTimelineCanvas({
         </button>
       </div>
 
-      {/* Per-cycle column headers */}
+      {/* Column headers — month col + one per cycle */}
       <div className="flex shrink-0 border-b border-gray-100 dark:border-gray-800">
+        {/* Month column header */}
+        <div
+          className="shrink-0 px-3 py-2 bg-gray-50/50 dark:bg-gray-800/30 border-r border-gray-200 dark:border-gray-700"
+          style={{ width: MONTH_COL_WIDTH }}
+        >
+          <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-300">Month</h3>
+          <p className="text-[10px] text-gray-400 dark:text-gray-500">12-month view</p>
+        </div>
+
+        {/* Cycle column headers */}
         {visibleCycles.map((cycle, i) => {
           const count = clients.filter((c) => c.reviewCycleId === cycle.id).length;
           return (
             <div
               key={cycle.id}
-              className={`flex-1 min-w-0 px-4 py-2 bg-gray-50/50 dark:bg-gray-800/30 ${
-                i > 0 ? "border-l border-gray-200 dark:border-gray-700" : ""
-              }`}
+              className={`flex-1 min-w-0 px-4 py-2 bg-gray-50/50 dark:bg-gray-800/30 border-l border-gray-200 dark:border-gray-700`}
             >
               <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-300 truncate">
                 {cycle.name}
@@ -245,24 +245,20 @@ function SharedTimelineCanvas({
         className="flex-1 overflow-y-auto relative select-none"
         style={{ minHeight: 0 }}
       >
-        <div className="relative mx-4" style={{ height: totalPx }}>
+        <div className="relative" style={{ height: totalPx }}>
 
-          {/* Month bands — span full width of all columns */}
+          {/* Month bands — span full width including month column */}
           {monthBands.map((band, i) => (
             <div
               key={i}
-              className={`absolute inset-x-0 ${band.isAlternate ? "bg-gray-50 dark:bg-gray-900/40" : "bg-white dark:bg-transparent"}`}
+              className={`absolute inset-x-0 z-0 ${band.isAlternate ? "bg-gray-50 dark:bg-gray-900/40" : "bg-white dark:bg-transparent"}`}
               style={{ top: band.topPx, height: band.heightPx }}
-            >
-              <span className="absolute left-0 top-1 text-[10px] text-gray-300 dark:text-gray-600 font-medium pl-1">
-                {band.label}
-              </span>
-            </div>
+            />
           ))}
 
-          {/* Today line — spans the full width */}
+          {/* Today line — spans full width */}
           <div
-            className="absolute inset-x-0 flex items-center z-10 pointer-events-none"
+            className="absolute inset-x-0 flex items-center z-20 pointer-events-none"
             style={{ top: todayPx }}
           >
             <div className="flex-1 border-t-2 border-dashed border-indigo-400" />
@@ -271,10 +267,35 @@ function SharedTimelineCanvas({
             </span>
           </div>
 
-          {/* Cycle columns — laid out side-by-side over the shared canvas */}
+          {/* Column layout — month labels + cycle data columns */}
           <div className="absolute inset-0 flex">
-            {visibleCycles.map((cycle, colIdx) => {
-              // Only show clients that are assigned and not in the warning band
+
+            {/* Month label column */}
+            <div
+              className="shrink-0 relative z-10 border-r border-gray-200 dark:border-gray-700"
+              style={{ width: MONTH_COL_WIDTH }}
+            >
+              {monthBands.map((band, i) => {
+                const [monthName, year] = band.label.split(" ");
+                return (
+                  <div
+                    key={i}
+                    className="absolute left-0 right-0 pl-2 pt-1"
+                    style={{ top: band.topPx, height: band.heightPx }}
+                  >
+                    <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 leading-tight">
+                      {monthName}
+                    </span>
+                    <span className="block text-[10px] text-gray-400 dark:text-gray-500 leading-tight">
+                      {year}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Cycle data columns */}
+            {visibleCycles.map((cycle) => {
               const colClients = clients.filter(
                 (c) =>
                   c.reviewCycleId === cycle.id &&
@@ -285,9 +306,7 @@ function SharedTimelineCanvas({
               return (
                 <div
                   key={cycle.id}
-                  className={`flex-1 min-w-0 relative ${
-                    colIdx > 0 ? "border-l border-gray-200 dark:border-gray-700" : ""
-                  }`}
+                  className="flex-1 min-w-0 relative z-10 border-l border-gray-200 dark:border-gray-700"
                 >
                   {/* Milestone blocks — left half of this column */}
                   {cycle.milestones.map((m) => {
