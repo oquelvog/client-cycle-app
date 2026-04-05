@@ -481,7 +481,19 @@ export function ReviewCycleManager({ reviewCycles, onChanged }: Props) {
               )}
 
               <button
-                onClick={() => deleteReviewCycle(cycle.id).then(onChanged)}
+                onClick={async () => {
+                  const confirmed = window.confirm(
+                    `Are you sure you want to delete "${cycle.name}"? This will permanently delete this cycle, all its milestones, and any clients assigned to it.`
+                  );
+                  if (!confirmed) return;
+                  try {
+                    await deleteReviewCycle(cycle.id);
+                    onChanged();
+                  } catch (err) {
+                    alert("Failed to delete cycle. Please try again.");
+                    console.error(err);
+                  }
+                }}
                 className="text-xs text-red-400 hover:text-red-600 dark:hover:text-red-300"
               >
                 Delete this touchpoint cycle
