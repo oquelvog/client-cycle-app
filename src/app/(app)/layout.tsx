@@ -32,7 +32,7 @@ export default async function AppLayout({
             </Link>
           </nav>
         </div>
-        <UserButton afterSignOutUrl="/sign-in" />
+        <UserButton />
       </header>
 
       {/* Page content */}
