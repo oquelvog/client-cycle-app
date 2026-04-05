@@ -24,7 +24,7 @@ model ReviewCycle {
   milestones Milestone[]
   clients    Client[]
   createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  updatedAt  DateTime    @default(now()) @updatedAt
 }
 
 enum DurationType {
@@ -47,7 +47,7 @@ model Milestone {
   checkIns       CheckIn[]
   currentClients Client[]
   createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  updatedAt      DateTime     @default(now()) @updatedAt
 }
 
 model CheckIn {
@@ -60,7 +60,7 @@ model CheckIn {
   tasks          Task[]
   clientCheckIns ClientCheckIn[]
   createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  updatedAt      DateTime        @default(now()) @updatedAt
 }
 
 model Task {
@@ -71,7 +71,7 @@ model Task {
   checkIn     CheckIn      @relation(fields: [checkInId], references: [id], onDelete: Cascade)
   clientTasks ClientTask[]
   createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  updatedAt   DateTime     @default(now()) @updatedAt
 }
 
 model Client {
@@ -91,7 +91,7 @@ model Client {
   clientTasks        ClientTask[]
   clientCheckIns     ClientCheckIn[]
   createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
+  updatedAt          DateTime        @default(now()) @updatedAt
 }
 
 enum TaskStatus {
@@ -108,7 +108,7 @@ model ClientTask {
   status      TaskStatus @default(pending)
   completedAt DateTime?
   createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  updatedAt   DateTime   @default(now()) @updatedAt
 
   @@unique([clientId, taskId])
 }
@@ -122,7 +122,7 @@ model ClientCheckIn {
   completed   Boolean   @default(false)
   completedAt DateTime?
   createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  updatedAt   DateTime  @default(now()) @updatedAt
 
   @@unique([clientId, checkInId])
 }
