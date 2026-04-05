@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { createOnboardingCycles } from '@/lib/onboarding'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,6 +30,8 @@ export async function POST(req: NextRequest) {
     data: { name: name.trim(), email: email.trim(), password: hashed, role: 'advisor' },
     select: { id: true, name: true, email: true, role: true },
   })
+
+  await createOnboardingCycles(user.id)
 
   return NextResponse.json(user, { status: 201 })
 }

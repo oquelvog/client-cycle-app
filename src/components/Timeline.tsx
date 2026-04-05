@@ -335,7 +335,7 @@ export default function Timeline({ refreshKey }: { refreshKey: number }) {
                               <div
                                 className="absolute top-full left-0 mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[68px]"
                                 onClick={e => e.stopPropagation()}>
-                                {[currentYear, currentYear + 1].map(y => (
+                                {[currentYear - 1, currentYear, currentYear + 1].map(y => (
                                   <button
                                     key={y}
                                     onClick={() => handleUpdateYear(c.id, y)}
