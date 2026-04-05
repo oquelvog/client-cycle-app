@@ -87,7 +87,18 @@ export function MultiClientActionDialog({
       <div className="p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-gray-900 dark:text-gray-100">Multi-Client Action</h3>
-          <span className="text-xs text-gray-400 dark:text-gray-500">Step {step} of 3</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-400 dark:text-gray-500">Step {step} of 3</span>
+            <button
+              onClick={handleClose}
+              className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 p-0.5 rounded"
+              aria-label="Close"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Step 1: Select milestone */}

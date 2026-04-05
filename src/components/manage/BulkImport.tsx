@@ -18,7 +18,7 @@ export function BulkImport({ onImported }: Props) {
   function downloadTemplate() {
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([
-      ["Household Name", "Review Cycle", "Milestone"],
+      ["Client Name", "Touchpoint Cycle", "Milestone"],
       ["Johnson Family", "Annual Review", "Initial Meeting"],
     ]);
     XLSX.utils.book_append_sheet(wb, ws, "Import Template");
@@ -35,8 +35,8 @@ export function BulkImport({ onImported }: Props) {
       const raw = XLSX.utils.sheet_to_json<Record<string, string>>(ws, { defval: "" });
 
       const rows: ImportRow[] = raw.map((r) => ({
-        householdName: r["Household Name"] ?? r["household_name"] ?? "",
-        reviewCycleName: r["Review Cycle"] ?? r["review_cycle"] ?? "",
+        householdName: r["Client Name"] ?? r["Household Name"] ?? r["household_name"] ?? "",
+        reviewCycleName: r["Touchpoint Cycle"] ?? r["Review Cycle"] ?? r["review_cycle"] ?? "",
         milestoneName: r["Milestone"] ?? r["milestone"] ?? "",
       }));
 
