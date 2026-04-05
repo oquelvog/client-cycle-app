@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
+import { seedNewAdvisor } from "@/lib/onboarding";
 
 export const dynamic = "force-dynamic";
 
@@ -9,8 +10,17 @@ export async function GET() {
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // Ensure user record exists
-    await prisma.user.upsert({ where: { id: userId }, update: {}, create: { id: userId } });
+    // Upsert user record and check onboarding status
+    const user = await prisma.user.upsert({
+      where: { id: userId },
+      update: {},
+      create: { id: userId, onboarded: false },
+    });
+
+    // First-login onboarding: seed example data automatically
+    if (!user.onboarded) {
+      await seedNewAdvisor(userId);
+    }
 
     const [reviewCycles, clients] = await Promise.all([
       prisma.reviewCycle.findMany({
