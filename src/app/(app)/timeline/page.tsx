@@ -16,6 +16,7 @@ type FullClient = Client & {
 };
 
 const STORAGE_ORDER_KEY = "annua-cycle-order";
+const MAX_SELECTED_CYCLES = 2;
 
 export default function TimelinePage() {
   const [reviewCycles, setReviewCycles] = useState<FullReviewCycle[]>([]);
@@ -106,9 +107,11 @@ export default function TimelinePage() {
       const { reviewCycles: cycles, clients: cls } = await res.json();
       setReviewCycles(cycles);
       setClients(cls);
-      // Select all cycles by default on first load
+      // Select first 2 cycles by default on first load
       setSelectedCycleIds((prev) =>
-        prev.length === 0 && cycles.length > 0 ? cycles.map((c: FullReviewCycle) => c.id) : prev
+        prev.length === 0 && cycles.length > 0
+          ? cycles.slice(0, MAX_SELECTED_CYCLES).map((c: FullReviewCycle) => c.id)
+          : prev
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -120,9 +123,14 @@ export default function TimelinePage() {
   useEffect(() => { load(); }, [load]);
 
   function toggleCycle(id: string) {
-    setSelectedCycleIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+    setSelectedCycleIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= MAX_SELECTED_CYCLES) {
+        // Drop the oldest (first) selection and add the new one
+        return [...prev.slice(1), id];
+      }
+      return [...prev, id];
+    });
   }
 
   const detailClient = clients.find((c) => c.id === detailClientId) ?? null;
@@ -168,7 +176,7 @@ export default function TimelinePage() {
             Select timelines to display
           </p>
           <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
-            Choose one or more · drag to reorder
+            Select up to 2 · drag to reorder
           </p>
         </div>
 

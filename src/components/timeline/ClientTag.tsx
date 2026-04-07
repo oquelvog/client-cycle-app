@@ -53,7 +53,7 @@ export function ClientTag({
   }
 
   return (
-    <div className="relative inline-flex items-stretch rounded-full shadow-sm border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 overflow-visible text-xs font-medium">
+    <div className="relative inline-flex items-stretch rounded-full shadow-sm border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 overflow-visible text-xs font-medium max-w-full">
       {/* Left segment: name + X/Y */}
       <button
         onClick={onOpenDetail}

@@ -8,8 +8,7 @@ import {
   getMilestonePosition,
   dateToPx,
   today,
-  isNeedsAttention,
-  getDayOfYear,
+  dayOfYearToDate,
   currentYear,
 } from "@/lib/timeline";
 import { MilestoneBlock } from "./MilestoneBlock";
@@ -91,8 +90,6 @@ function SharedTimelineCanvas({
   const { windowStart, windowEnd, totalPx } = getWindowBounds();
   const monthBands = getMonthBands(windowStart, windowEnd);
   const todayPx = dateToPx(today(), windowStart);
-  const yr = currentYear();
-  const todayDoy = getDayOfYear(today());
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [statsMap, setStatsMap] = useState<Record<string, { total: number; completed: number }>>({});
@@ -133,17 +130,12 @@ function SharedTimelineCanvas({
 
   const needsAttention = assignedClients.filter((c) => {
     if (!c.currentMilestone) return false;
-    // Lagging: cycle year is behind AND the milestone window has already closed.
-    if (c.cycleYear < yr && c.currentMilestone.endDayOfYear < todayDoy) return true;
-    // Original logic: milestone not visible in window AND 182+ days since last occurrence.
-    const pos = getMilestonePosition(
-      c.currentMilestone.dayOfYear,
-      c.currentMilestone.endDayOfYear,
-      c.currentMilestone.durationType,
-      windowStart,
-      windowEnd
-    );
-    return !pos && isNeedsAttention(c.currentMilestone.dayOfYear);
+    // Flag clients whose milestone date (using their actual cycle year) was
+    // more than 6 months (182 days) ago. This correctly handles clients whose
+    // cycleYear lags behind the current year.
+    const milestoneDate = dayOfYearToDate(c.currentMilestone.dayOfYear, c.cycleYear);
+    const diffDays = (today().getTime() - milestoneDate.getTime()) / 86_400_000;
+    return diffDays > 182;
   });
   const needsAttentionIds = new Set(needsAttention.map((c) => c.id));
 
@@ -349,7 +341,7 @@ function SharedTimelineCanvas({
                     return (
                       <div
                         key={`tags-${m.id}`}
-                        className="absolute flex flex-col items-start gap-1 pl-3 z-10"
+                        className="absolute flex flex-col items-start gap-1 pl-3 z-10 overflow-x-hidden"
                         style={{ top: pos.topPx + 2, left: "calc(50% + 12px)", right: 0 }}
                       >
                         <ClientTagGroup
