@@ -341,7 +341,7 @@ function SharedTimelineCanvas({
                     return (
                       <div
                         key={`tags-${m.id}`}
-                        className="absolute flex flex-col items-start gap-1 pl-3 z-10 overflow-x-hidden"
+                        className="absolute flex flex-col items-start gap-1 pl-3 z-10"
                         style={{ top: pos.topPx + 2, left: "calc(50% + 12px)", right: 0 }}
                       >
                         <ClientTagGroup

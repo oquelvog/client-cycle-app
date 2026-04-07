@@ -247,7 +247,7 @@ export function Timeline({
             return (
               <div
                 key={`tags-${milestone.id}`}
-                className="absolute flex flex-col gap-1 pl-3 overflow-x-hidden"
+                className="absolute flex flex-col gap-1 pl-3"
                 style={{
                   top: pos.topPx + 2,
                   left: "calc(50% + 12px)",
