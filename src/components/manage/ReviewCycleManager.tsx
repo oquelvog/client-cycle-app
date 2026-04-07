@@ -11,9 +11,13 @@ import {
   updateMilestone,
   deleteMilestone,
   createCheckIn,
+  updateCheckIn,
   deleteCheckIn,
+  reorderCheckIns,
   createTask,
+  updateTask,
   deleteTask,
+  reorderTasks,
 } from "@/actions/milestones";
 import { Button } from "@/components/ui/Button";
 
@@ -361,6 +365,14 @@ export function ReviewCycleManager({ reviewCycles, onChanged }: Props) {
   const [editingMilestone, setEditingMilestone] = useState<string | null>(null);
   const [addingCheckIn, setAddingCheckIn] = useState<string | null>(null);
   const [addingTask, setAddingTask] = useState<string | null>(null);
+  const [editingCi, setEditingCi] = useState<string | null>(null);
+  const [editingTask, setEditingTask] = useState<string | null>(null);
+  const [ciEditTitle, setCiEditTitle] = useState("");
+  const [taskEditTitle, setTaskEditTitle] = useState("");
+  const [draggingCiId, setDraggingCiId] = useState<string | null>(null);
+  const [dragOverCiId, setDragOverCiId] = useState<string | null>(null);
+  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
+  const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
 
   const [ciTitle, setCiTitle] = useState("");
   const [tTitle, setTTitle] = useState("");
@@ -389,6 +401,57 @@ export function ReviewCycleManager({ reviewCycles, onChanged }: Props) {
     setTTitle("");
     setAddingTask(null);
     onChanged();
+  }
+
+  async function handleSaveCiEdit(ciId: string) {
+    if (!ciEditTitle.trim()) return;
+    await updateCheckIn(ciId, { title: ciEditTitle.trim() });
+    setEditingCi(null);
+    onChanged();
+  }
+
+  async function handleSaveTaskEdit(taskId: string) {
+    if (!taskEditTitle.trim()) return;
+    await updateTask(taskId, { title: taskEditTitle.trim() });
+    setEditingTask(null);
+    onChanged();
+  }
+
+  function handleDropCi(
+    checkIns: (CheckIn & { tasks: Task[] })[],
+    targetId: string
+  ) {
+    if (!draggingCiId || draggingCiId === targetId) {
+      setDraggingCiId(null); setDragOverCiId(null); return;
+    }
+    const ids = checkIns.map((ci) => ci.id);
+    const from = ids.indexOf(draggingCiId);
+    const to = ids.indexOf(targetId);
+    if (from === -1 || to === -1) {
+      setDraggingCiId(null); setDragOverCiId(null); return;
+    }
+    const next = [...ids];
+    next.splice(from, 1);
+    next.splice(to, 0, draggingCiId);
+    setDraggingCiId(null); setDragOverCiId(null);
+    reorderCheckIns(next).then(onChanged);
+  }
+
+  function handleDropTask(tasks: Task[], targetId: string) {
+    if (!draggingTaskId || draggingTaskId === targetId) {
+      setDraggingTaskId(null); setDragOverTaskId(null); return;
+    }
+    const ids = tasks.map((t) => t.id);
+    const from = ids.indexOf(draggingTaskId);
+    const to = ids.indexOf(targetId);
+    if (from === -1 || to === -1) {
+      setDraggingTaskId(null); setDragOverTaskId(null); return;
+    }
+    const next = [...ids];
+    next.splice(from, 1);
+    next.splice(to, 0, draggingTaskId);
+    setDraggingTaskId(null); setDragOverTaskId(null);
+    reorderTasks(next).then(onChanged);
   }
 
   return (
@@ -470,26 +533,114 @@ export function ReviewCycleManager({ reviewCycles, onChanged }: Props) {
 
                       <div className="pl-4 space-y-2">
                         {milestone.checkIns.map((ci) => (
-                          <div key={ci.id} className="border-l-2 border-gray-100 dark:border-gray-700 pl-3">
-                            <div className="flex items-center gap-1 mb-1">
-                              <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{ci.title}</span>
-                              <button
-                                onClick={() => deleteCheckIn(ci.id).then(onChanged)}
-                                className="ml-auto text-gray-300 dark:text-gray-600 hover:text-red-400 text-[10px]"
-                              >✕</button>
-                            </div>
+                          <div
+                            key={ci.id}
+                            draggable
+                            onDragStart={(e) => { setDraggingCiId(ci.id); e.dataTransfer.effectAllowed = "move"; }}
+                            onDragOver={(e) => { e.preventDefault(); if (draggingCiId && draggingCiId !== ci.id) setDragOverCiId(ci.id); }}
+                            onDrop={() => handleDropCi(milestone.checkIns, ci.id)}
+                            onDragEnd={() => { setDraggingCiId(null); setDragOverCiId(null); }}
+                            className={`border-l-2 pl-3 transition-opacity ${
+                              draggingCiId === ci.id ? "opacity-40" : "opacity-100"
+                            } ${dragOverCiId === ci.id ? "border-indigo-400 dark:border-indigo-500" : "border-gray-100 dark:border-gray-700"}`}
+                          >
+                            {/* Deliverable header row */}
+                            {editingCi === ci.id ? (
+                              <div className="flex items-center gap-1 mb-1">
+                                <input
+                                  value={ciEditTitle}
+                                  onChange={(e) => setCiEditTitle(e.target.value)}
+                                  onKeyDown={(e) => { if (e.key === "Enter") handleSaveCiEdit(ci.id); if (e.key === "Escape") setEditingCi(null); }}
+                                  autoFocus
+                                  className="flex-1 text-xs border border-indigo-300 dark:border-indigo-600 rounded px-2 py-0.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none"
+                                />
+                                <button onClick={() => handleSaveCiEdit(ci.id)} disabled={!ciEditTitle.trim()} className="text-green-500 hover:text-green-600 text-[10px] font-bold px-1">✓</button>
+                                <button onClick={() => setEditingCi(null)} className="text-gray-400 hover:text-gray-600 text-[10px] px-1">✕</button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1 mb-1">
+                                <span className="cursor-grab text-gray-300 dark:text-gray-600 hover:text-gray-400 shrink-0">
+                                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                                    <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
+                                    <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
+                                    <circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
+                                  </svg>
+                                </span>
+                                <span className="text-xs font-medium text-gray-600 dark:text-gray-400 flex-1 truncate">{ci.title}</span>
+                                <button
+                                  onClick={() => { setEditingCi(ci.id); setCiEditTitle(ci.title); }}
+                                  className="text-gray-300 dark:text-gray-600 hover:text-indigo-500 dark:hover:text-indigo-400 shrink-0"
+                                  title="Edit deliverable"
+                                >
+                                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828A2 2 0 0110 16.414H8v-2a2 2 0 01.586-1.414z" />
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={() => deleteCheckIn(ci.id).then(onChanged)}
+                                  className="text-gray-300 dark:text-gray-600 hover:text-red-400 text-[10px] shrink-0"
+                                >✕</button>
+                              </div>
+                            )}
+
+                            {/* Task rows */}
                             <div className="space-y-0.5">
                               {ci.tasks.map((task) => (
-                                <div key={task.id} className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                                  <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
-                                  <span className="flex-1">{task.title}</span>
-                                  <button
-                                    onClick={() => deleteTask(task.id).then(onChanged)}
-                                    className="text-gray-300 dark:text-gray-600 hover:text-red-400"
-                                  >✕</button>
+                                <div
+                                  key={task.id}
+                                  draggable
+                                  onDragStart={(e) => { e.stopPropagation(); setDraggingTaskId(task.id); e.dataTransfer.effectAllowed = "move"; }}
+                                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); if (draggingTaskId && draggingTaskId !== task.id) setDragOverTaskId(task.id); }}
+                                  onDrop={(e) => { e.stopPropagation(); handleDropTask(ci.tasks, task.id); }}
+                                  onDragEnd={(e) => { e.stopPropagation(); setDraggingTaskId(null); setDragOverTaskId(null); }}
+                                  className={`flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 transition-opacity ${
+                                    draggingTaskId === task.id ? "opacity-40" : "opacity-100"
+                                  } ${dragOverTaskId === task.id ? "bg-indigo-50 dark:bg-indigo-950/20 rounded" : ""}`}
+                                >
+                                  {editingTask === task.id ? (
+                                    <>
+                                      <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600 shrink-0" />
+                                      <input
+                                        value={taskEditTitle}
+                                        onChange={(e) => setTaskEditTitle(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === "Enter") handleSaveTaskEdit(task.id); if (e.key === "Escape") setEditingTask(null); }}
+                                        autoFocus
+                                        className="flex-1 text-xs border border-indigo-300 dark:border-indigo-600 rounded px-2 py-0.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none"
+                                      />
+                                      <button onClick={() => handleSaveTaskEdit(task.id)} disabled={!taskEditTitle.trim()} className="text-green-500 hover:text-green-600 text-[10px] font-bold">✓</button>
+                                      <button onClick={() => setEditingTask(null)} className="text-gray-400 hover:text-gray-600 text-[10px]">✕</button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span className="cursor-grab text-gray-300 dark:text-gray-600 hover:text-gray-400 shrink-0">
+                                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                                          <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
+                                          <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
+                                          <circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
+                                        </svg>
+                                      </span>
+                                      <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600 shrink-0" />
+                                      <span className="flex-1 truncate">{task.title}</span>
+                                      <button
+                                        onClick={() => { setEditingTask(task.id); setTaskEditTitle(task.title); }}
+                                        className="text-gray-300 dark:text-gray-600 hover:text-indigo-500 dark:hover:text-indigo-400 shrink-0"
+                                        title="Edit task"
+                                      >
+                                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828A2 2 0 0110 16.414H8v-2a2 2 0 01.586-1.414z" />
+                                        </svg>
+                                      </button>
+                                      <button
+                                        onClick={() => deleteTask(task.id).then(onChanged)}
+                                        className="text-gray-300 dark:text-gray-600 hover:text-red-400 shrink-0"
+                                      >✕</button>
+                                    </>
+                                  )}
                                 </div>
                               ))}
                             </div>
+
+                            {/* Add task */}
                             {addingTask === ci.id ? (
                               <div className="flex gap-1 mt-1">
                                 <input

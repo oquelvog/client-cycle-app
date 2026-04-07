@@ -13,8 +13,8 @@ export async function getReviewCycles() {
         orderBy: { order: "asc" },
         include: {
           checkIns: {
-            orderBy: { dayOfYear: "asc" },
-            include: { tasks: { orderBy: { createdAt: "asc" } } },
+            orderBy: { order: "asc" },
+            include: { tasks: { orderBy: { order: "asc" } } },
           },
         },
       },

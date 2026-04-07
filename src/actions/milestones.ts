@@ -97,17 +97,44 @@ export async function createCheckIn(data: {
   });
   if (!milestone) throw new Error("Milestone not found");
 
+  const count = await prisma.checkIn.count({ where: { milestoneId: data.milestoneId } });
+
   const checkIn = await prisma.checkIn.create({
     data: {
       milestoneId: data.milestoneId,
       title: data.title,
       description: data.description,
       dayOfYear: data.dayOfYear,
+      order: count,
     },
     include: { tasks: true },
   });
   revalidatePath("/manage");
   return checkIn;
+}
+
+export async function updateCheckIn(id: string, data: { title: string }) {
+  const advisorId = await getAdvisorId();
+  const checkIn = await prisma.checkIn.findFirst({
+    where: { id, milestone: { reviewCycle: { advisorId } } },
+  });
+  if (!checkIn) throw new Error("Deliverable not found");
+  await prisma.checkIn.update({ where: { id }, data: { title: data.title } });
+  revalidatePath("/manage");
+}
+
+export async function reorderCheckIns(orderedIds: string[]) {
+  if (orderedIds.length === 0) return;
+  const advisorId = await getAdvisorId();
+  const first = await prisma.checkIn.findFirst({
+    where: { id: orderedIds[0], milestone: { reviewCycle: { advisorId } } },
+  });
+  if (!first) throw new Error("Deliverable not found");
+  await prisma.$transaction(
+    orderedIds.map((id, i) => prisma.checkIn.update({ where: { id }, data: { order: i } }))
+  );
+  revalidatePath("/manage");
+  revalidatePath("/timeline");
 }
 
 export async function deleteCheckIn(id: string) {
@@ -131,15 +158,42 @@ export async function createTask(data: {
   });
   if (!checkIn) throw new Error("Check-in not found");
 
+  const count = await prisma.task.count({ where: { checkInId: data.checkInId } });
+
   const task = await prisma.task.create({
     data: {
       checkInId: data.checkInId,
       title: data.title,
       description: data.description,
+      order: count,
     },
   });
   revalidatePath("/manage");
   return task;
+}
+
+export async function updateTask(id: string, data: { title: string }) {
+  const advisorId = await getAdvisorId();
+  const task = await prisma.task.findFirst({
+    where: { id, checkIn: { milestone: { reviewCycle: { advisorId } } } },
+  });
+  if (!task) throw new Error("Task not found");
+  await prisma.task.update({ where: { id }, data: { title: data.title } });
+  revalidatePath("/manage");
+}
+
+export async function reorderTasks(orderedIds: string[]) {
+  if (orderedIds.length === 0) return;
+  const advisorId = await getAdvisorId();
+  const first = await prisma.task.findFirst({
+    where: { id: orderedIds[0], checkIn: { milestone: { reviewCycle: { advisorId } } } },
+  });
+  if (!first) throw new Error("Task not found");
+  await prisma.$transaction(
+    orderedIds.map((id, i) => prisma.task.update({ where: { id }, data: { order: i } }))
+  );
+  revalidatePath("/manage");
+  revalidatePath("/timeline");
 }
 
 export async function deleteTask(id: string) {

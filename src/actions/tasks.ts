@@ -84,10 +84,10 @@ export async function getClientMilestoneTasks(clientId: string) {
             where: { clientId },
           },
         },
-        orderBy: { createdAt: "asc" },
+        orderBy: { order: "asc" },
       },
     },
-    orderBy: { dayOfYear: "asc" },
+    orderBy: { order: "asc" },
   });
 
   return checkIns;

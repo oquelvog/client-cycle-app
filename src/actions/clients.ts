@@ -13,8 +13,8 @@ export async function getClients() {
       currentMilestone: {
         include: {
           checkIns: {
-            include: { tasks: true },
-            orderBy: { dayOfYear: "asc" },
+            include: { tasks: { orderBy: { order: "asc" } } },
+            orderBy: { order: "asc" },
           },
         },
       },

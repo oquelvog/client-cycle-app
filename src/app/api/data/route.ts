@@ -30,8 +30,8 @@ export async function GET() {
             orderBy: { order: "asc" },
             include: {
               checkIns: {
-                orderBy: { dayOfYear: "asc" },
-                include: { tasks: { orderBy: { createdAt: "asc" } } },
+                orderBy: { order: "asc" },
+                include: { tasks: { orderBy: { order: "asc" } } },
               },
             },
           },
@@ -45,8 +45,8 @@ export async function GET() {
           currentMilestone: {
             include: {
               checkIns: {
-                include: { tasks: true },
-                orderBy: { dayOfYear: "asc" },
+                include: { tasks: { orderBy: { order: "asc" } } },
+                orderBy: { order: "asc" },
               },
             },
           },
