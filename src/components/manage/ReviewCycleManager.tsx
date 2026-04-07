@@ -76,6 +76,22 @@ function dayOfYearToDateString(day: number): string {
   return `2025-${mm}-${dd}`;
 }
 
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+function dayOfYearToMonthDay(day: number): string {
+  const ref = new Date(2025, 0, day);
+  return `${MONTH_NAMES[ref.getMonth()]} ${ref.getDate()}`;
+}
+
+function formatSpecificDateLabel(dayOfYear: number, endDayOfYear: number): string {
+  const start = dayOfYearToMonthDay(dayOfYear);
+  if (endDayOfYear === dayOfYear) return start;
+  return `${start} – ${dayOfYearToMonthDay(endDayOfYear)}`;
+}
+
 function initialStateFromMilestone(milestone: Milestone) {
   const { durationType, dayOfYear, endDayOfYear } = milestone;
   if (durationType === "quarter") {
@@ -382,7 +398,11 @@ export function ReviewCycleManager({ reviewCycles, onChanged }: Props) {
                         </button>
                         {/* Spacer pushes duration + delete to right */}
                         <span className="flex-1" />
-                        <span className="text-xs text-gray-400 dark:text-gray-500">{DURATION_LABELS[milestone.durationType]}</span>
+                        <span className="text-xs text-gray-400 dark:text-gray-500">
+                          {milestone.durationType === "specific_date"
+                            ? formatSpecificDateLabel(milestone.dayOfYear, milestone.endDayOfYear)
+                            : DURATION_LABELS[milestone.durationType]}
+                        </span>
                         <button
                           onClick={() => deleteMilestone(milestone.id).then(onChanged)}
                           className="text-gray-300 dark:text-gray-600 hover:text-red-400 dark:hover:text-red-400 text-xs"
@@ -432,13 +452,13 @@ export function ReviewCycleManager({ reviewCycles, onChanged }: Props) {
                           </div>
                         ))}
 
-                        {/* Add check-in */}
+                        {/* Add deliverable */}
                         {addingCheckIn === milestone.id ? (
                           <div className="space-y-1 mt-2">
                             <input
                               value={ciTitle}
                               onChange={(e) => setCiTitle(e.target.value)}
-                              placeholder="Check-in title…"
+                              placeholder="Deliverable title…"
                               autoFocus
                               className="w-full text-xs border border-gray-200 dark:border-gray-700 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none"
                             />
@@ -455,7 +475,7 @@ export function ReviewCycleManager({ reviewCycles, onChanged }: Props) {
                           <button
                             onClick={() => { setAddingCheckIn(milestone.id); setCiTitle(""); }}
                             className="text-xs text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 mt-1"
-                          >+ add check-in</button>
+                          >+ add deliverable</button>
                         )}
                       </div>
                     </>
