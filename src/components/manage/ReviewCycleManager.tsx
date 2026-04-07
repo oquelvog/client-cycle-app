@@ -92,6 +92,61 @@ function formatSpecificDateLabel(dayOfYear: number, endDayOfYear: number): strin
   return `${start} – ${dayOfYearToMonthDay(endDayOfYear)}`;
 }
 
+const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+interface MonthDayPickerProps {
+  value: string; // "2025-MM-DD" or ""
+  onChange: (v: string) => void;
+  className?: string;
+}
+
+function MonthDayPicker({ value, onChange, className = "" }: MonthDayPickerProps) {
+  const parts = value ? value.split("-") : [];
+  const month = parts.length === 3 ? parseInt(parts[1]) : 0;
+  const day   = parts.length === 3 ? parseInt(parts[2]) : 0;
+  const maxDay = month ? DAYS_IN_MONTH[month - 1] : 31;
+
+  function build(mm: number, dd: number): string {
+    if (!mm || !dd) return "";
+    return `2025-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
+  }
+
+  function handleMonth(mm: number) {
+    const clampedDay = day && mm ? Math.min(day, DAYS_IN_MONTH[mm - 1]) : day;
+    onChange(mm ? build(mm, clampedDay) : "");
+  }
+
+  const selectCls = `${className} text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400`;
+
+  return (
+    <div className="flex gap-2">
+      <select
+        value={month || ""}
+        onChange={(e) => handleMonth(parseInt(e.target.value) || 0)}
+        className={`flex-1 ${selectCls}`}
+        aria-label="Month"
+      >
+        <option value="">Month</option>
+        {MONTH_NAMES.map((name, i) => (
+          <option key={name} value={i + 1}>{name}</option>
+        ))}
+      </select>
+      <select
+        value={day || ""}
+        onChange={(e) => onChange(month ? build(month, parseInt(e.target.value) || 0) : "")}
+        disabled={!month}
+        className={`w-20 ${selectCls} disabled:opacity-50 disabled:cursor-not-allowed`}
+        aria-label="Day"
+      >
+        <option value="">Day</option>
+        {Array.from({ length: maxDay }, (_, i) => (
+          <option key={i + 1} value={i + 1}>{i + 1}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 function initialStateFromMilestone(milestone: Milestone) {
   const { durationType, dayOfYear, endDayOfYear } = milestone;
   if (durationType === "quarter") {
@@ -255,13 +310,17 @@ function MilestoneForm({ cycleId, milestone, onSaved, onCancel }: MilestoneFormP
         <div className="space-y-2">
           <div>
             <label className={labelCls}>Start date</label>
-            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={`mt-1 ${inputCls}`} />
+            <div className="mt-1">
+              <MonthDayPicker value={startDate} onChange={setStartDate} />
+            </div>
           </div>
           <div>
             <label className={labelCls}>
               End date <span className="normal-case font-normal text-gray-400 dark:text-gray-500">(optional — leave blank for single day)</span>
             </label>
-            <input type="date" value={endDate} min={startDate} onChange={(e) => setEndDate(e.target.value)} className={`mt-1 ${inputCls}`} />
+            <div className="mt-1">
+              <MonthDayPicker value={endDate} onChange={setEndDate} />
+            </div>
           </div>
         </div>
       )}
