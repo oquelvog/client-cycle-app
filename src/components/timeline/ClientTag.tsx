@@ -83,7 +83,7 @@ export function ClientTag({
         <button
           onClick={() => setYearDropdownOpen((v) => !v)}
           className={cn(
-            "flex items-center px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-200",
+            "flex items-center px-2 py-1 rounded-r-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-200",
             isYearBehind && "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30"
           )}
           title="Change cycle year"
@@ -111,25 +111,6 @@ export function ClientTag({
         )}
       </div>
 
-      {/* Divider */}
-      <div className="w-px bg-gray-200 dark:bg-gray-600 self-stretch" />
-
-      {/* Right segment: arrow → checklist */}
-      <button
-        onClick={() => {
-          if (allComplete) {
-            onAdvancementNeeded();
-          } else {
-            onOpenChecklist();
-          }
-        }}
-        className="flex items-center px-2 py-1 rounded-r-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-        title="Open task checklist"
-      >
-        <svg className="w-3 h-3 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      </button>
     </div>
   );
 }
