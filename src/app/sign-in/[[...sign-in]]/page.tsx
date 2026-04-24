@@ -13,7 +13,7 @@ export default function SignInPage() {
       </div>
 
       {/* Clerk sign-in widget */}
-      <SignIn />
+      <SignIn forceRedirectUrl="/timeline" />
     </main>
   );
 }

@@ -13,7 +13,7 @@ export default function SignUpPage() {
       </div>
 
       {/* Clerk sign-up widget */}
-      <SignUp />
+      <SignUp forceRedirectUrl="/timeline" />
     </main>
   );
 }
