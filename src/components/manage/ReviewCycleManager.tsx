@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ReviewCycle, Milestone, CheckIn, Task, DurationType } from "@/types";
 import {
   createReviewCycle,
@@ -106,8 +106,19 @@ interface MonthDayPickerProps {
 
 function MonthDayPicker({ value, onChange, className = "" }: MonthDayPickerProps) {
   const parts = value ? value.split("-") : [];
-  const month = parts.length === 3 ? parseInt(parts[1]) : 0;
-  const day   = parts.length === 3 ? parseInt(parts[2]) : 0;
+  const monthFromValue = parts.length === 3 ? parseInt(parts[1]) : 0;
+  const day            = parts.length === 3 ? parseInt(parts[2]) : 0;
+
+  // Hold the selected month locally so the select stays chosen while the user
+  // picks a day (before both fields are filled we don't call onChange).
+  const [localMonth, setLocalMonth] = useState<number>(monthFromValue);
+
+  // When the parent clears value (e.g. switching duration type), reset local state.
+  useEffect(() => {
+    if (!value) setLocalMonth(0);
+  }, [value]);
+
+  const month = monthFromValue || localMonth;
   const maxDay = month ? DAYS_IN_MONTH[month - 1] : 31;
 
   function build(mm: number, dd: number): string {
@@ -116,8 +127,14 @@ function MonthDayPicker({ value, onChange, className = "" }: MonthDayPickerProps
   }
 
   function handleMonth(mm: number) {
-    const clampedDay = day && mm ? Math.min(day, DAYS_IN_MONTH[mm - 1]) : day;
-    onChange(mm ? build(mm, clampedDay) : "");
+    setLocalMonth(mm);
+    if (!mm) {
+      onChange("");
+    } else if (day) {
+      const clampedDay = Math.min(day, DAYS_IN_MONTH[mm - 1]);
+      onChange(build(mm, clampedDay));
+    }
+    // No day yet — just store month locally; wait for day selection.
   }
 
   const selectCls = `${className} text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400`;
