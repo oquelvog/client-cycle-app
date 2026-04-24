@@ -16,6 +16,7 @@ type FullClient = Client & {
 };
 
 const STORAGE_ORDER_KEY = "annua-cycle-order";
+const STORAGE_SELECTION_KEY = "annua-cycle-selection";
 const MAX_SELECTED_CYCLES = 2;
 
 export default function TimelinePage() {
@@ -31,14 +32,23 @@ export default function TimelinePage() {
   const [cycleOrder, setCycleOrder] = useState<string[]>([]);
   const orderInitialized = useRef(false);
 
-  // Load saved order once on mount
+  // Load saved order and selection once on mount
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_ORDER_KEY);
       if (raw) setCycleOrder(JSON.parse(raw));
     } catch { /* ignore */ }
+    try {
+      const rawSel = localStorage.getItem(STORAGE_SELECTION_KEY);
+      if (rawSel) setSelectedCycleIds(JSON.parse(rawSel));
+    } catch { /* ignore */ }
     orderInitialized.current = true;
   }, []);
+
+  // Persist selection whenever it changes
+  useEffect(() => {
+    try { localStorage.setItem(STORAGE_SELECTION_KEY, JSON.stringify(selectedCycleIds)); } catch { /* ignore */ }
+  }, [selectedCycleIds]);
 
   // Merge saved order with live DB cycles: honour stored sequence, append new ones
   const orderedCycles = useMemo<FullReviewCycle[]>(() => {
@@ -107,12 +117,14 @@ export default function TimelinePage() {
       const { reviewCycles: cycles, clients: cls } = await res.json();
       setReviewCycles(cycles);
       setClients(cls);
-      // Select first 2 cycles by default on first load
-      setSelectedCycleIds((prev) =>
-        prev.length === 0 && cycles.length > 0
-          ? cycles.slice(0, MAX_SELECTED_CYCLES).map((c: FullReviewCycle) => c.id)
-          : prev
-      );
+      // Restore saved selection, filtering out deleted cycles; default to first 2
+      setSelectedCycleIds((prev) => {
+        const valid = prev.filter((id) => cycles.some((c: FullReviewCycle) => c.id === id));
+        if (valid.length === 0 && cycles.length > 0) {
+          return cycles.slice(0, MAX_SELECTED_CYCLES).map((c: FullReviewCycle) => c.id);
+        }
+        return valid;
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
