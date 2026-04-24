@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Client, Milestone } from "@/types";
 import { ClientTag } from "./ClientTag";
 
@@ -88,7 +89,7 @@ export function ClientTagGroup({
   );
 }
 
-// ── Overflow pill + popover ───────────────────────────────────────────────────
+// ── Overflow pill + portal popover ────────────────────────────────────────────
 
 interface OverflowPillProps extends Omit<TagGroupProps, "availableHeightPx"> {}
 
@@ -102,12 +103,19 @@ function OverflowPill({
   onYearUpdated,
 }: OverflowPillProps) {
   const [open, setOpen] = useState(false);
-  const groupRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
 
+  // Close on outside click — check both trigger and portaled popover.
   useEffect(() => {
     if (!open) return;
     function handleOutside(e: MouseEvent) {
-      if (groupRef.current && !groupRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        !buttonRef.current?.contains(target) &&
+        !popoverRef.current?.contains(target)
+      ) {
         setOpen(false);
       }
     }
@@ -115,10 +123,19 @@ function OverflowPill({
     return () => document.removeEventListener("mousedown", handleOutside);
   }, [open]);
 
+  function handleToggle() {
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setPos({ top: rect.bottom + 6, left: rect.left });
+    }
+    setOpen((v) => !v);
+  }
+
   return (
-    <div ref={groupRef} className="relative self-start">
+    <div className="self-start">
       <button
-        onClick={() => setOpen((v) => !v)}
+        ref={buttonRef}
+        onClick={handleToggle}
         className="inline-flex items-center gap-1.5 pl-3 pr-2.5 py-1 rounded-full text-xs font-medium border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-200"
       >
         <span className="flex items-center gap-0.5">
@@ -144,8 +161,12 @@ function OverflowPill({
         </svg>
       </button>
 
-      {open && (
-        <div className="absolute left-0 top-full mt-1.5 z-50 min-w-[220px] max-h-64 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-xl dark:shadow-black/50 p-2 flex flex-col gap-1">
+      {open && createPortal(
+        <div
+          ref={popoverRef}
+          style={{ position: "fixed", top: pos.top, left: pos.left, zIndex: 9999 }}
+          className="min-w-[220px] max-h-64 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-xl dark:shadow-black/50 p-2 flex flex-col gap-1"
+        >
           <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide px-1 mb-0.5">
             {milestone.title} · {clients.length} more
           </p>
@@ -161,7 +182,8 @@ function OverflowPill({
               onYearUpdated={onYearUpdated}
             />
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
