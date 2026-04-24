@@ -348,6 +348,7 @@ function SharedTimelineCanvas({
                           clients={mClients}
                           milestone={m}
                           statsMap={statsMap}
+                          availableHeightPx={pos.heightPx - 4}
                           onOpenDetail={onOpenDetail}
                           onOpenChecklist={onOpenChecklist}
                           onAdvancementNeeded={handleAdvancementNeeded}

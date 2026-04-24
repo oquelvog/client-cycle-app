@@ -8,25 +8,33 @@ interface TagGroupProps {
   clients: Client[];
   milestone: Milestone;
   statsMap: Record<string, { total: number; completed: number }>;
+  availableHeightPx: number;
   onOpenDetail: (clientId: string) => void;
   onOpenChecklist: (clientId: string) => void;
   onAdvancementNeeded: (clientId: string) => void;
   onYearUpdated: () => void;
 }
 
-const COLLAPSE_THRESHOLD = 3;
+// Measured height of one ClientTag pill: py-1 (8px) + text-xs line-height (16px) + border (2px)
+const TAG_HEIGHT_PX = 26;
+// gap-1 between stacked tags
+const TAG_GAP_PX = 4;
+const TAG_ROW_PX = TAG_HEIGHT_PX + TAG_GAP_PX;
 
 export function ClientTagGroup({
   clients,
   milestone,
   statsMap,
+  availableHeightPx,
   onOpenDetail,
   onOpenChecklist,
   onAdvancementNeeded,
   onYearUpdated,
 }: TagGroupProps) {
-  // Fewer than threshold: render tags individually
-  if (clients.length < COLLAPSE_THRESHOLD) {
+  const totalNeededPx = clients.length * TAG_ROW_PX - TAG_GAP_PX;
+  const allFit = totalNeededPx <= availableHeightPx;
+
+  if (allFit) {
     return (
       <>
         {clients.map((c) => (
@@ -45,22 +53,46 @@ export function ClientTagGroup({
     );
   }
 
+  // How many individual tags fit while still leaving a slot for the overflow pill
+  const slotsForTags = Math.max(
+    0,
+    Math.floor((availableHeightPx + TAG_GAP_PX) / TAG_ROW_PX) - 1
+  );
+  const visibleClients = clients.slice(0, slotsForTags);
+  const overflowClients = clients.slice(slotsForTags);
+
   return (
-    <CollapsedGroup
-      clients={clients}
-      milestone={milestone}
-      statsMap={statsMap}
-      onOpenDetail={onOpenDetail}
-      onOpenChecklist={onOpenChecklist}
-      onAdvancementNeeded={onAdvancementNeeded}
-      onYearUpdated={onYearUpdated}
-    />
+    <>
+      {visibleClients.map((c) => (
+        <ClientTag
+          key={c.id}
+          client={c}
+          milestone={milestone}
+          stats={statsMap[c.id] ?? { total: 0, completed: 0 }}
+          onOpenDetail={() => onOpenDetail(c.id)}
+          onOpenChecklist={() => onOpenChecklist(c.id)}
+          onAdvancementNeeded={() => onAdvancementNeeded(c.id)}
+          onYearUpdated={onYearUpdated}
+        />
+      ))}
+      <OverflowPill
+        clients={overflowClients}
+        milestone={milestone}
+        statsMap={statsMap}
+        onOpenDetail={onOpenDetail}
+        onOpenChecklist={onOpenChecklist}
+        onAdvancementNeeded={onAdvancementNeeded}
+        onYearUpdated={onYearUpdated}
+      />
+    </>
   );
 }
 
-// ── Collapsed pill + popover ──────────────────────────────────────────────────
+// ── Overflow pill + popover ───────────────────────────────────────────────────
 
-function CollapsedGroup({
+interface OverflowPillProps extends Omit<TagGroupProps, "availableHeightPx"> {}
+
+function OverflowPill({
   clients,
   milestone,
   statsMap,
@@ -68,11 +100,10 @@ function CollapsedGroup({
   onOpenChecklist,
   onAdvancementNeeded,
   onYearUpdated,
-}: TagGroupProps) {
+}: OverflowPillProps) {
   const [open, setOpen] = useState(false);
   const groupRef = useRef<HTMLDivElement>(null);
 
-  // Close on outside click
   useEffect(() => {
     if (!open) return;
     function handleOutside(e: MouseEvent) {
@@ -86,13 +117,11 @@ function CollapsedGroup({
 
   return (
     <div ref={groupRef} className="relative self-start">
-      {/* Count pill */}
       <button
         onClick={() => setOpen((v) => !v)}
         className="inline-flex items-center gap-1.5 pl-3 pr-2.5 py-1 rounded-full text-xs font-medium border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-200"
       >
         <span className="flex items-center gap-0.5">
-          {/* Three stacked dots indicating multiple clients */}
           {clients.slice(0, 3).map((c) => (
             <span
               key={c.id}
@@ -101,7 +130,7 @@ function CollapsedGroup({
             />
           ))}
         </span>
-        {clients.length} clients
+        +{clients.length}
         <svg
           className={`w-2.5 h-2.5 transition-transform ${open ? "rotate-180" : ""}`}
           fill="currentColor"
@@ -115,11 +144,10 @@ function CollapsedGroup({
         </svg>
       </button>
 
-      {/* Popover */}
       {open && (
         <div className="absolute left-0 top-full mt-1.5 z-50 min-w-[220px] max-h-64 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-xl dark:shadow-black/50 p-2 flex flex-col gap-1">
           <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide px-1 mb-0.5">
-            {milestone.title} · {clients.length} clients
+            {milestone.title} · {clients.length} more
           </p>
           {clients.map((c) => (
             <ClientTag
