@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { Client, Milestone, ReviewCycle } from "@/types";
-import { getLiveStats, getClientMilestoneTasks } from "@/actions/tasks";
-import { updateClient, updateClientYear } from "@/actions/clients";
+import { getLiveStats, getClientMilestoneTasks, toggleClientTask } from "@/actions/tasks";
+import { updateClient, updateClientYear, advanceClient } from "@/actions/clients";
 import { YearUpdatePrompt } from "@/components/modals/YearUpdatePrompt";
+import { AdvancementDialog } from "@/components/modals/AdvancementDialog";
 import { currentYear } from "@/lib/timeline";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +35,8 @@ export function HouseholdDetailPanel({ client, reviewCycles, onClose, onRefresh 
   const [lastContacted, setLastContacted] = useState("");
   const [yearDismissed, setYearDismissed] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showAdvancement, setShowAdvancement] = useState(false);
+  const [advancing, setAdvancing] = useState(false);
 
   const yr = currentYear();
 
@@ -88,13 +91,43 @@ export function HouseholdDetailPanel({ client, reviewCycles, onClose, onRefresh 
     onRefresh();
   }
 
+  async function handleToggle(taskId: string, done: boolean) {
+    if (!client) return;
+    const result = await toggleClientTask(client.id, taskId, done);
+    await loadData();
+    onRefresh();
+    if (result.total > 0 && result.completed === result.total) {
+      setShowAdvancement(true);
+    }
+  }
+
+  async function handleConfirmAdvancement() {
+    if (!client) return;
+    setAdvancing(true);
+    try {
+      await advanceClient(client.id);
+      onRefresh();
+      onClose();
+    } finally {
+      setAdvancing(false);
+      setShowAdvancement(false);
+    }
+  }
+
   if (!client) return null;
 
   const currentMilestone = client.currentMilestone as Milestone | null;
   const pct = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
   const isYearBehind = client.cycleYear < yr;
 
+  const allMilestones = reviewCycles.find((rc) => rc.id === client.reviewCycleId)?.milestones ?? [];
+  const currentMilestoneIdx = currentMilestone ? allMilestones.findIndex((m) => m.id === currentMilestone.id) : -1;
+  const nextMilestone = currentMilestoneIdx >= 0
+    ? allMilestones[currentMilestoneIdx === allMilestones.length - 1 ? 0 : currentMilestoneIdx + 1]
+    : null;
+
   return (
+    <>
     <div className="flex flex-col h-full bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800">
@@ -204,9 +237,16 @@ export function HouseholdDetailPanel({ client, reviewCycles, onClose, onRefresh 
                     {ci.tasks.map((task) => {
                       const done = task.clientTasks[0]?.status === "completed";
                       return (
-                        <div key={task.id} className="flex items-center gap-2">
-                          <div className={cn("w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0",
-                            done ? "border-green-500 bg-green-500" : "border-gray-300 dark:border-gray-600"
+                        <button
+                          key={task.id}
+                          onClick={() => handleToggle(task.id, !done)}
+                          className="flex items-center gap-2 w-full text-left group"
+                        >
+                          <div className={cn(
+                            "w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 transition-colors",
+                            done
+                              ? "border-green-500 bg-green-500"
+                              : "border-gray-300 dark:border-gray-600 group-hover:border-indigo-400 dark:group-hover:border-indigo-500"
                           )}>
                             {done && (
                               <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -214,10 +254,10 @@ export function HouseholdDetailPanel({ client, reviewCycles, onClose, onRefresh 
                               </svg>
                             )}
                           </div>
-                          <span className={cn("text-xs", done ? "line-through text-gray-400" : "text-gray-700 dark:text-gray-300")}>
+                          <span className={cn("text-xs", done ? "line-through text-gray-400" : "text-gray-700 dark:text-gray-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400")}>
                             {task.title}
                           </span>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -263,5 +303,16 @@ export function HouseholdDetailPanel({ client, reviewCycles, onClose, onRefresh 
         )}
       </div>
     </div>
+
+      <AdvancementDialog
+        open={showAdvancement}
+        clientName={client.name}
+        currentMilestoneTitle={currentMilestone?.title ?? "Current milestone"}
+        nextMilestoneTitle={nextMilestone?.title ?? "Next milestone"}
+        onConfirm={handleConfirmAdvancement}
+        onCancel={() => setShowAdvancement(false)}
+        loading={advancing}
+      />
+    </>
   );
 }
