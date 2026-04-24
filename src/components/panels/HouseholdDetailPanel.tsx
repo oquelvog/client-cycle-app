@@ -120,7 +120,9 @@ export function HouseholdDetailPanel({ client, reviewCycles, onClose, onRefresh 
   const pct = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
   const isYearBehind = client.cycleYear < yr;
 
-  const allMilestones = reviewCycles.find((rc) => rc.id === client.reviewCycleId)?.milestones ?? [];
+  const allMilestones = [...(reviewCycles.find((rc) => rc.id === client.reviewCycleId)?.milestones ?? [])].sort(
+    (a, b) => a.dayOfYear - b.dayOfYear
+  );
   const currentMilestoneIdx = currentMilestone ? allMilestones.findIndex((m) => m.id === currentMilestone.id) : -1;
   const nextMilestone = currentMilestoneIdx >= 0
     ? allMilestones[currentMilestoneIdx === allMilestones.length - 1 ? 0 : currentMilestoneIdx + 1]

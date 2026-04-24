@@ -146,7 +146,7 @@ function SharedTimelineCanvas({
     const cycle = visibleCycles.find((rc) => rc.id === client.reviewCycleId);
     if (!cycle) return;
 
-    const milestones = cycle.milestones;
+    const milestones = [...cycle.milestones].sort((a, b) => a.dayOfYear - b.dayOfYear);
     const currentIdx = milestones.findIndex((m) => m.id === client.currentMilestoneId);
     const nextIdx = currentIdx === milestones.length - 1 ? 0 : currentIdx + 1;
 

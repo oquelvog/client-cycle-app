@@ -42,7 +42,7 @@ export function TaskChecklistPanel({ open, onClose, client, milestone, allMilest
   const yr = currentYear();
   const isYearBehind = client.cycleYear < yr;
 
-  const milestones = allMilestones;
+  const milestones = [...allMilestones].sort((a, b) => a.dayOfYear - b.dayOfYear);
   const currentIdx = milestone ? milestones.findIndex((m) => m.id === milestone.id) : -1;
   const nextMilestone =
     currentIdx >= 0

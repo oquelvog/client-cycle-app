@@ -139,7 +139,7 @@ export async function advanceClient(clientId: string) {
     include: {
       reviewCycle: {
         include: {
-          milestones: { orderBy: { order: "asc" } },
+          milestones: { orderBy: { dayOfYear: "asc" } },
         },
       },
     },
