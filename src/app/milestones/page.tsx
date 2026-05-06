@@ -65,7 +65,7 @@ export default function MilestonesPage() {
     try {
       const res = await fetch('/api/milestones')
       const data = await res.json()
-      setMilestones(data)
+      setMilestones(data.sort((a: Milestone, b: Milestone) => a.dayOfYear - b.dayOfYear))
     } finally {
       setLoading(false)
     }

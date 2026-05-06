@@ -90,7 +90,7 @@ export default function Sidebar({ onRefresh = () => {} }: { onRefresh?: () => vo
 
   const fetchAll = async () => {
     const [mr, cr] = await Promise.all([fetch('/api/milestones'), fetch('/api/clients')])
-    if (mr.ok) setMilestones(await mr.json())
+    if (mr.ok) setMilestones((await mr.json()).sort((a: Milestone, b: Milestone) => a.dayOfYear - b.dayOfYear))
     if (cr.ok) setClients(await cr.json())
   }
 

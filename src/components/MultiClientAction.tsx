@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 
 interface Task { id: string; title: string }
 interface CheckIn { id: string; title: string; tasks: Task[] }
-interface Milestone { id: string; title: string; color?: string; checkIns: CheckIn[] }
+interface Milestone { id: string; title: string; color?: string; dayOfYear: number; checkIns: CheckIn[] }
 interface Client { id: string; name: string; currentMilestoneId: string | null }
 
 interface Props {
@@ -26,7 +26,7 @@ export default function MultiClientAction({ open, onClose, onDone }: Props) {
   useEffect(() => {
     if (!open) return
     Promise.all([fetch('/api/milestones'), fetch('/api/clients')]).then(async ([mr, cr]) => {
-      if (mr.ok) setMilestones(await mr.json())
+      if (mr.ok) setMilestones((await mr.json()).sort((a: Milestone, b: Milestone) => a.dayOfYear - b.dayOfYear))
       if (cr.ok) setClients(await cr.json())
     })
   }, [open])
